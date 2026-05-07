@@ -1,10 +1,29 @@
 # SocialLab
 
-SocialLab es un laboratorio docente para una asignatura de **Tratamiento de Datos Masivos**. El objetivo no es solo construir una red social de ejemplo, sino ver como encajan las piezas principales de un ecosistema Big Data moderno: **data lake**, **ETL**, **Spark**, **MongoDB**, **Neo4j**, una API web y modelos de **Machine Learning**.
+**Laboratorio Big Data para aprender bases de datos poliglotas con Spark, MongoDB, Neo4j y Machine Learning.**
+
+SocialLab es un proyecto educativo y demostrativo para una asignatura de **Tratamiento de Datos Masivos**. Simula una red social completa para enseñar, de forma practica, como se diseña un ecosistema de datos moderno: **data lake**, **ETL con Spark**, **MongoDB**, **Neo4j**, **FastAPI**, visualizacion web y modelos de **Machine Learning**.
 
 El proyecto esta pensado para que el estudiante entienda el recorrido completo del dato: desde datos crudos generados en un data lake local, pasando por transformaciones `raw -> silver -> gold` con Spark, hasta su explotacion en una **base de datos poliglota** donde cada motor cumple una funcion distinta. MongoDB se usa para documentos y consultas operacionales/analiticas, Neo4j para relaciones y recorridos de grafo, y los modelos ML consumen datos preparados en la capa gold.
 
+Puede servir como caso de uso para docencia, demos tecnicas o aprendizaje autonomo sobre **arquitecturas Big Data**, **polyglot persistence**, **graph analytics**, **data engineering**, **Spark ETL**, **NoSQL** y **analitica aplicada a redes sociales**.
+
 ![Arquitectura de SocialLab](docs/assets/sociallab-architecture.png)
+
+## Para quien es
+
+- Estudiantes de ingenieria de datos, Big Data o sistemas de informacion.
+- Profesores que quieran una practica completa y ejecutable con Docker.
+- Desarrolladores que quieran ver un ejemplo integrado de **Spark + MongoDB + Neo4j**.
+- Personas interesadas en bases de datos poliglotas, grafos sociales, NoSQL y pipelines ETL.
+
+## Casos de uso del repositorio
+
+- Practica universitaria de **Tratamiento de Datos Masivos**.
+- Demo de **base de datos poliglota** con una parte documental y una parte de grafo.
+- Proyecto de referencia para explicar un flujo **data lake -> Spark ETL -> MongoDB/Neo4j -> API -> dashboard**.
+- Laboratorio para comparar consultas documentales, consultas Cypher y modelos ML sobre los mismos datos.
+- Ejemplo de arquitectura local-first que puede migrarse despues a MongoDB Atlas, Neo4j Aura y plataformas cloud.
 
 ## Que se aprende
 
@@ -216,16 +235,6 @@ Despues recarga la pestaña **Spark/ML**. La validacion esperada es triple:
 2. Aparecen metricas del modelo en la web.
 3. La funcionalidad asociada se activa: spam marcado, predicciones, segmentos o recomendaciones.
 
-## Como se evalua una entrega
-
-Una entrega profesional deberia demostrar:
-
-- Correctitud tecnica: la consulta o modelo devuelve el contrato esperado por la API.
-- Lectura empresarial: el resultado responde a una pregunta de producto, crecimiento, moderacion o analitica.
-- Integracion: el dato fluye desde `gold`, MongoDB o Neo4j hasta la web sin pasos manuales ocultos.
-- Reproducibilidad: otro estudiante puede ejecutar `seed`, `etl`, `train` y obtener un resultado equivalente.
-- Observabilidad: las metricas, rankings o grafos permiten explicar si el sistema esta funcionando.
-
 ## Datos demo
 
 El seed incluye una red social sintetica con:
@@ -313,7 +322,7 @@ La guia completa esta en `docs/MIGRACION_CLOUD.md`.
 
 ## Notas de desarrollo
 
-- `.env`, `.env.cloud`, datos generados y configuracion local de Claude no se versionan.
+- `.env`, `.env.cloud` y datos generados no se versionan.
 - `data/raw`, `data/silver` y `data/gold` se regeneran con `seed`, `etl` y `train`.
 - Los cambios en rutas FastAPI requieren reiniciar `app`.
 - Los cambios en assets frontend pueden requerir recargar el navegador.
