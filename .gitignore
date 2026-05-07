@@ -22,6 +22,9 @@ data/silver/*
 data/gold/*
 !data/**/.gitkeep
 
+# Generated artifacts
+outputs/
+
 # IDE
 .vscode/
 .idea/
@@ -35,6 +38,7 @@ Thumbs.db
 
 # Jupyter
 .ipynb_checkpoints/
+notebooks/*SOLUCIONES*.ipynb
 
 # Spark
 spark-warehouse/
