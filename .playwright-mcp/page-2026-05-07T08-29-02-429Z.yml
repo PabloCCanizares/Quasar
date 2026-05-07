@@ -1,0 +1,9 @@
+- generic [ref=e4]:
+  - heading "SocialLab" [level=1] [ref=e5]
+  - paragraph [ref=e6]: Red social pedagógica
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: Username
+      - textbox "Tu usuario" [ref=e10]
+    - button "Entrar" [ref=e11] [cursor=pointer]
+    - button "Crear cuenta" [ref=e12] [cursor=pointer]

@@ -1,0 +1,35 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]: SocialLab
+    - navigation [ref=e6]:
+      - link "Inicio" [ref=e7] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e8]: Inicio
+      - link "Explorar" [ref=e9] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e10]: Explorar
+      - link "Perfil" [ref=e11] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e12]: Perfil
+      - link "Neo4j" [ref=e13] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e14]: Neo4j
+      - link "Spark/ML" [ref=e15] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e16]: Spark/ML
+      - link "Salir" [ref=e17] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e18]: Salir
+  - main [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e21]: Inicio
+      - button "Detector Spam" [ref=e22] [cursor=pointer]
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e25]: P
+        - generic [ref=e26]:
+          - textbox "¿Qué está pasando?" [ref=e27]
+          - button "Publicar" [ref=e29] [cursor=pointer]
+      - generic [ref=e30]: Cargando...
+  - complementary [ref=e31]:
+    - 'textbox "Buscar usuarios o #hashtags..." [ref=e32]'

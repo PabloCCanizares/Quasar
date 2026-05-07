@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sociallab",
+      "runtimeExecutable": "/Users/pablocc/Documents/GitHub/SocialLab/.venv/bin/python",
+      "runtimeArgs": ["main.py"],
+      "port": 8000
+    }
+  ]
+}

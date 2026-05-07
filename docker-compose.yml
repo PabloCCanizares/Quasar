@@ -1,0 +1,70 @@
+# SocialLab — ecosistema completo en Docker (añadido al setup nativo).
+#
+# Uso:
+#   docker compose up -d --build
+#   docker compose exec app python -m src.seed.generate_dirty_data
+#   docker compose exec app python -m src.spark.run_pipeline --all
+#   docker compose exec app python -m src.spark.models.run_all
+#
+# Web:           http://localhost:8000
+# Neo4j browser: http://localhost:7474   (user neo4j / pass neo4jneo4j)
+# Mongo:         mongodb://localhost:27017
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: sociallab-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ping:1})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5.20-community
+    container_name: sociallab-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/neo4jneo4j
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: sociallab-app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.docker
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+      - spark_ivy:/root/.ivy2
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  neo4j_data:
+  neo4j_logs:
+  spark_ivy:

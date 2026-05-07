@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1020" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="gDbx" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF5A3C"/>
+      <stop offset="1" stop-color="#CC2A12"/>
+    </linearGradient>
+    <linearGradient id="gDbxLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF8A70"/>
+      <stop offset="1" stop-color="#FF5A3C"/>
+    </linearGradient>
+    <linearGradient id="gMongo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#10AA50"/>
+      <stop offset="1" stop-color="#00684A"/>
+    </linearGradient>
+    <linearGradient id="gNeo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4581C3"/>
+      <stop offset="1" stop-color="#2A5A8C"/>
+    </linearGradient>
+    <linearGradient id="gLocal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#546E7A"/>
+      <stop offset="1" stop-color="#37474F"/>
+    </linearGradient>
+    <linearGradient id="gPython" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4B8BBE"/>
+      <stop offset="1" stop-color="#306998"/>
+    </linearGradient>
+    <linearGradient id="gFree" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#43A047"/>
+      <stop offset="1" stop-color="#2E7D32"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.15"/>
+    </filter>
+
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#37474F"/>
+    </marker>
+    <marker id="arrowLight" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#78909C"/>
+    </marker>
+  </defs>
+
+  <!-- ============ TITLE ============ -->
+  <text x="40" y="40" font-size="24" font-weight="700" fill="#263238">SocialLab — Arquitectura Poliglota Cloud · plan gratuito</text>
+  <text x="40" y="62" font-size="13" fill="#607D8B">Databricks Community Edition · MongoDB Atlas M0 · Neo4j AuraDB Free  ·  setup ~22 min  ·  coste 0 €</text>
+
+  <!-- ============ FREE BADGE ============ -->
+  <g transform="translate(880,22)" filter="url(#shadow)">
+    <rect x="0" y="0" width="158" height="50" rx="8" fill="url(#gFree)"/>
+    <text x="79" y="22" font-size="13" font-weight="700" fill="white" text-anchor="middle">100% GRATIS</text>
+    <text x="79" y="40" font-size="10" fill="#C8E6C9" text-anchor="middle">sin tarjeta de crédito</text>
+  </g>
+
+  <!-- ============ LEGEND ============ -->
+  <g transform="translate(1060,30)">
+    <rect x="0" y="0" width="510" height="42" rx="6" fill="#FAFAFA" stroke="#CFD8DC"/>
+    <circle cx="18" cy="21" r="9" fill="#FF5A3C"/>
+    <text x="18" y="25" font-size="11" font-weight="700" fill="white" text-anchor="middle">1</text>
+    <text x="34" y="25" font-size="11" fill="#37474F">Flujo numerado del pipeline · </text>
+    <line x1="200" y1="21" x2="230" y2="21" stroke="#37474F" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="238" y="25" font-size="11" fill="#37474F">datos · </text>
+    <line x1="278" y1="21" x2="308" y2="21" stroke="#78909C" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowLight)"/>
+    <text x="316" y="25" font-size="11" fill="#37474F">credenciales (widgets de notebook)</text>
+  </g>
+
+  <!-- ============ LOCAL ZONE ============ -->
+  <g>
+    <rect x="30" y="95" width="320" height="680" rx="10" fill="#F5F5F5" stroke="#90A4AE" stroke-width="1.5"/>
+    <rect x="30" y="95" width="320" height="30" rx="10" fill="#37474F"/>
+    <rect x="30" y="115" width="320" height="10" fill="#37474F"/>
+    <text x="48" y="115" font-size="13" font-weight="700" fill="white">🖥️  Entorno local del alumno</text>
+
+    <g transform="translate(60,150)" filter="url(#shadow)">
+      <rect width="260" height="70" rx="6" fill="white" stroke="#CFD8DC"/>
+      <rect x="0" y="0" width="60" height="70" rx="6" fill="url(#gLocal)"/>
+      <text x="30" y="38" font-size="22" font-weight="700" fill="white" text-anchor="middle">⚙</text>
+      <text x="30" y="58" font-size="9" font-weight="600" fill="white" text-anchor="middle">.env.cloud</text>
+      <text x="75" y="28" font-size="13" font-weight="700" fill="#263238">Configuración</text>
+      <text x="75" y="45" font-size="10" fill="#546E7A">MONGO_URI · NEO4J_URI</text>
+      <text x="75" y="58" font-size="10" fill="#546E7A">LAB_NEO4J · LAB_ML</text>
+    </g>
+
+    <g transform="translate(60,240)" filter="url(#shadow)">
+      <rect width="260" height="90" rx="6" fill="white" stroke="#CFD8DC"/>
+      <rect x="0" y="0" width="60" height="90" rx="6" fill="url(#gPython)"/>
+      <text x="30" y="48" font-size="24" font-weight="700" fill="white" text-anchor="middle">🐍</text>
+      <text x="75" y="26" font-size="13" font-weight="700" fill="#263238">generate_dirty_data.py</text>
+      <text x="75" y="44" font-size="10" fill="#546E7A">3k users · 80k posts · 200k likes</text>
+      <text x="75" y="58" font-size="10" fill="#546E7A">Encoding roto · timestamps mixtos</text>
+      <text x="75" y="72" font-size="10" fill="#546E7A">Spam · duplicados · huérfanos</text>
+      <text x="75" y="84" font-size="9" font-style="italic" fill="#78909C">./data/raw/ (NDJSON)</text>
+    </g>
+
+    <g transform="translate(60,350)" filter="url(#shadow)">
+      <rect width="260" height="100" rx="6" fill="white" stroke="#CFD8DC"/>
+      <rect x="0" y="0" width="60" height="100" rx="6" fill="#009688"/>
+      <text x="30" y="42" font-size="11" font-weight="700" fill="white" text-anchor="middle">Fast</text>
+      <text x="30" y="58" font-size="11" font-weight="700" fill="white" text-anchor="middle">API</text>
+      <text x="30" y="82" font-size="9" fill="white" text-anchor="middle">:8000</text>
+      <text x="75" y="26" font-size="13" font-weight="700" fill="#263238">FastAPI + Uvicorn</text>
+      <text x="75" y="44" font-size="10" fill="#546E7A">src/web/ · motor · neo4j driver</text>
+      <text x="75" y="58" font-size="10" fill="#546E7A">Rutas: users · posts · analytics</text>
+      <text x="75" y="72" font-size="10" fill="#546E7A">Escrituras live (origin="live")</text>
+      <text x="75" y="92" font-size="9" font-style="italic" fill="#78909C">~150 MB RAM (modo cloud)</text>
+    </g>
+
+    <g transform="translate(60,470)" filter="url(#shadow)">
+      <rect width="260" height="70" rx="6" fill="white" stroke="#CFD8DC"/>
+      <rect x="0" y="0" width="60" height="70" rx="6" fill="#455A64"/>
+      <text x="30" y="44" font-size="26" fill="white" text-anchor="middle">🌐</text>
+      <text x="75" y="28" font-size="13" font-weight="700" fill="#263238">Navegador</text>
+      <text x="75" y="45" font-size="10" fill="#546E7A">SPA servida por FastAPI</text>
+      <text x="75" y="58" font-size="10" fill="#546E7A">Alumno explora la red social</text>
+    </g>
+
+    <g transform="translate(60,560)" filter="url(#shadow)">
+      <rect width="260" height="70" rx="6" fill="white" stroke="#CFD8DC"/>
+      <rect x="0" y="0" width="60" height="70" rx="6" fill="url(#gDbx)"/>
+      <text x="30" y="44" font-size="14" font-weight="700" fill="white" text-anchor="middle">UI</text>
+      <text x="75" y="28" font-size="13" font-weight="700" fill="#263238">Subida a DBFS</text>
+      <text x="75" y="45" font-size="10" fill="#546E7A">Upload manual via UI o</text>
+      <text x="75" y="58" font-size="10" fill="#546E7A">`wget` desde notebook</text>
+    </g>
+
+    <text x="190" y="660" font-size="10" font-style="italic" fill="#78909C" text-anchor="middle">Python 3.11 · Java 17</text>
+    <text x="190" y="675" font-size="10" font-style="italic" fill="#78909C" text-anchor="middle">./lab.sh cloud  o  python main.py</text>
+  </g>
+
+  <!-- ============ DATABRICKS ZONE (incluye data lake DBFS) ============ -->
+  <g>
+    <!-- Outer frame -->
+    <rect x="400" y="95" width="620" height="760" rx="10" fill="#FFF2EF" stroke="#FF3621" stroke-width="1.5"/>
+    <rect x="400" y="95" width="620" height="30" rx="10" fill="#FF3621"/>
+    <rect x="400" y="115" width="620" height="10" fill="#FF3621"/>
+    <text x="418" y="115" font-size="13" font-weight="700" fill="white">🔶  Databricks Community Edition · Runtime 15.4 LTS (Spark 3.5) · single-node</text>
+
+    <!-- ===== DBFS sub-zone (data lake clásico) ===== -->
+    <g>
+      <rect x="420" y="145" width="580" height="185" rx="8" fill="#FFE0D9" stroke="#FF5A3C" stroke-width="1.2" stroke-dasharray="6 3"/>
+      <rect x="420" y="145" width="580" height="24" rx="8" fill="#FF5A3C"/>
+      <rect x="420" y="161" width="580" height="8" fill="#FF5A3C"/>
+      <text x="436" y="162" font-size="12" font-weight="700" fill="white">📚  DBFS clásico · sociallab data lake</text>
+      <text x="710" y="184" font-size="10" fill="#BF360C" text-anchor="middle" font-style="italic">dbfs:/FileStore/sociallab/</text>
+
+      <!-- Raw layer -->
+      <g transform="translate(440,195)" filter="url(#shadow)">
+        <rect width="180" height="120" rx="6" fill="white" stroke="#FFCCBC"/>
+        <rect x="0" y="0" width="180" height="28" rx="6" fill="url(#gDbx)"/>
+        <rect x="0" y="20" width="180" height="8" fill="url(#gDbx)"/>
+        <text x="90" y="19" font-size="11" font-weight="700" fill="white" text-anchor="middle">RAW · NDJSON</text>
+        <text x="90" y="52" font-size="13" font-weight="700" fill="#263238" text-anchor="middle">raw/</text>
+        <text x="90" y="70" font-size="10" fill="#546E7A" text-anchor="middle">users · posts</text>
+        <text x="90" y="84" font-size="10" fill="#546E7A" text-anchor="middle">likes · follows</text>
+        <text x="90" y="104" font-size="9" font-style="italic" fill="#78909C" text-anchor="middle">datos sucios</text>
+        <text x="90" y="116" font-size="9" font-style="italic" fill="#78909C" text-anchor="middle">listos para limpiar</text>
+      </g>
+
+      <!-- Silver layer -->
+      <g transform="translate(630,195)" filter="url(#shadow)">
+        <rect width="180" height="120" rx="6" fill="white" stroke="#FFCCBC"/>
+        <rect x="0" y="0" width="180" height="28" rx="6" fill="#90A4AE"/>
+        <rect x="0" y="20" width="180" height="8" fill="#90A4AE"/>
+        <text x="90" y="19" font-size="11" font-weight="700" fill="white" text-anchor="middle">SILVER · Parquet</text>
+        <text x="90" y="52" font-size="13" font-weight="700" fill="#263238" text-anchor="middle">silver/</text>
+        <text x="90" y="70" font-size="10" fill="#546E7A" text-anchor="middle">normalizado</text>
+        <text x="90" y="84" font-size="10" fill="#546E7A" text-anchor="middle">dedup · sin huérfanos</text>
+        <text x="90" y="104" font-size="9" font-style="italic" fill="#78909C" text-anchor="middle">snappy compression</text>
+        <text x="90" y="116" font-size="9" font-style="italic" fill="#78909C" text-anchor="middle">5 particiones</text>
+      </g>
+
+      <!-- Gold layer -->
+      <g transform="translate(820,195)" filter="url(#shadow)">
+        <rect width="160" height="120" rx="6" fill="white" stroke="#FFCCBC"/>
+        <rect x="0" y="0" width="160" height="28" rx="6" fill="#FFB300"/>
+        <rect x="0" y="20" width="160" height="8" fill="#FFB300"/>
+        <text x="80" y="19" font-size="11" font-weight="700" fill="white" text-anchor="middle">GOLD · Parquet</text>
+        <text x="80" y="52" font-size="13" font-weight="700" fill="#263238" text-anchor="middle">gold/</text>
+        <text x="80" y="70" font-size="9" fill="#546E7A" text-anchor="middle">user_stats</text>
+        <text x="80" y="83" font-size="9" fill="#546E7A" text-anchor="middle">post_rankings</text>
+        <text x="80" y="96" font-size="9" fill="#546E7A" text-anchor="middle">hashtag_trends</text>
+        <text x="80" y="115" font-size="9" font-style="italic" fill="#78909C" text-anchor="middle">listos para servir</text>
+      </g>
+    </g>
+
+    <!-- ===== Widgets (sustituyen Secret Scope) + nota sobre limitaciones ===== -->
+    <g transform="translate(420,350)" filter="url(#shadow)">
+      <rect width="280" height="55" rx="6" fill="white" stroke="#FFCCBC"/>
+      <rect x="0" y="0" width="60" height="55" rx="6" fill="#424242"/>
+      <text x="30" y="34" font-size="20" fill="white" text-anchor="middle">🔑</text>
+      <text x="70" y="22" font-size="12" font-weight="700" fill="#263238">Widgets de notebook</text>
+      <text x="70" y="36" font-size="10" fill="#546E7A">MONGO_URI · NEO4J_URI · NEO4J_PWD</text>
+      <text x="70" y="48" font-size="9" font-style="italic" fill="#78909C">CE no tiene Secret Scopes</text>
+    </g>
+
+    <g transform="translate(720,350)" filter="url(#shadow)">
+      <rect width="280" height="55" rx="6" fill="white" stroke="#FFCCBC"/>
+      <rect x="0" y="0" width="60" height="55" rx="6" fill="#7E57C2"/>
+      <text x="30" y="34" font-size="18" fill="white" text-anchor="middle">⏱</text>
+      <text x="70" y="22" font-size="12" font-weight="700" fill="#263238">Auto-shutdown 2 h</text>
+      <text x="70" y="36" font-size="10" fill="#546E7A">Cluster se apaga solo</text>
+      <text x="70" y="48" font-size="9" font-style="italic" fill="#78909C">DBFS persiste · libs hay que reinstalar</text>
+    </g>
+
+    <!-- Cluster (single-node CE) -->
+    <g transform="translate(420,420)" filter="url(#shadow)">
+      <rect width="580" height="75" rx="6" fill="white" stroke="#FFCCBC"/>
+      <rect x="0" y="0" width="60" height="75" rx="6" fill="url(#gDbx)"/>
+      <text x="30" y="44" font-size="20" fill="white" text-anchor="middle">⚡</text>
+      <text x="70" y="22" font-size="12" font-weight="700" fill="#263238">Cluster Community Edition · Spark 3.5 · single-node (~6 GB RAM, ~15 GB disco)</text>
+      <text x="70" y="40" font-size="10" fill="#546E7A">Conectores Maven instalados manualmente:</text>
+      <text x="70" y="54" font-size="9" font-family="monospace" fill="#37474F">mongo-spark-connector_2.12:10.4.0</text>
+      <text x="340" y="54" font-size="9" font-family="monospace" fill="#37474F">neo4j-connector-apache-spark_2.12:5.3.1</text>
+      <text x="70" y="68" font-size="9" font-style="italic" fill="#78909C">ETL: ~15-20 min (vs ~10 min en cluster Premium de pago)</text>
+    </g>
+
+    <!-- Orquestación title -->
+    <text x="420" y="525" font-size="12" font-weight="700" fill="#BF360C">Notebook orquestador (sustituye al Workflow): %run encadenado · ejecución manual</text>
+
+    <!-- Notebook 1: raw → silver -->
+    <g transform="translate(420,540)" filter="url(#shadow)">
+      <rect width="135" height="85" rx="6" fill="white" stroke="#FFCCBC"/>
+      <rect x="0" y="0" width="135" height="22" rx="6" fill="#FF3621"/>
+      <rect x="0" y="15" width="135" height="7" fill="#FF3621"/>
+      <text x="67" y="16" font-size="10" font-weight="700" fill="white" text-anchor="middle">01 · raw → silver</text>
+      <text x="67" y="40" font-size="10" font-weight="700" fill="#263238" text-anchor="middle">etl_silver.py</text>
+      <text x="67" y="54" font-size="8" fill="#546E7A" text-anchor="middle">fix encoding</text>
+      <text x="67" y="64" font-size="8" fill="#546E7A" text-anchor="middle">parse timestamps</text>
+      <text x="67" y="74" font-size="8" fill="#546E7A" text-anchor="middle">dedup · orphan filter</text>
+    </g>
+
+    <!-- Notebook 2: silver → gold -->
+    <g transform="translate(568,540)" filter="url(#shadow)">
+      <rect width="135" height="85" rx="6" fill="white" stroke="#FFCCBC"/>
+      <rect x="0" y="0" width="135" height="22" rx="6" fill="#FF3621"/>
+      <rect x="0" y="15" width="135" height="7" fill="#FF3621"/>
+      <text x="67" y="16" font-size="10" font-weight="700" fill="white" text-anchor="middle">02 · silver → gold</text>
+      <text x="67" y="40" font-size="10" font-weight="700" fill="#263238" text-anchor="middle">etl_gold.py</text>
+      <text x="67" y="54" font-size="8" fill="#546E7A" text-anchor="middle">user_stats</text>
+      <text x="67" y="64" font-size="8" fill="#546E7A" text-anchor="middle">post_rankings</text>
+      <text x="67" y="74" font-size="8" fill="#546E7A" text-anchor="middle">hashtag_trends</text>
+    </g>
+
+    <!-- Notebook 3: load mongo -->
+    <g transform="translate(716,540)" filter="url(#shadow)">
+      <rect width="135" height="85" rx="6" fill="white" stroke="#FFCCBC"/>
+      <rect x="0" y="0" width="135" height="22" rx="6" fill="url(#gMongo)"/>
+      <rect x="0" y="15" width="135" height="7" fill="#00684A"/>
+      <text x="67" y="16" font-size="10" font-weight="700" fill="white" text-anchor="middle">03 · load → Atlas M0</text>
+      <text x="67" y="40" font-size="10" font-weight="700" fill="#263238" text-anchor="middle">load_to_mongo.py</text>
+      <text x="67" y="54" font-size="8" fill="#546E7A" text-anchor="middle">mongo-spark writer</text>
+      <text x="67" y="64" font-size="8" fill="#546E7A" text-anchor="middle">filtra spam</text>
+      <text x="67" y="74" font-size="8" fill="#546E7A" text-anchor="middle">recalcula contadores</text>
+    </g>
+
+    <!-- Notebook 4: load neo4j -->
+    <g transform="translate(864,540)" filter="url(#shadow)">
+      <rect width="135" height="85" rx="6" fill="white" stroke="#FFCCBC"/>
+      <rect x="0" y="0" width="135" height="22" rx="6" fill="url(#gNeo)"/>
+      <rect x="0" y="15" width="135" height="7" fill="#2A5A8C"/>
+      <text x="67" y="16" font-size="10" font-weight="700" fill="white" text-anchor="middle">04 · load → Aura Free</text>
+      <text x="67" y="40" font-size="10" font-weight="700" fill="#263238" text-anchor="middle">load_to_neo4j.py</text>
+      <text x="67" y="54" font-size="8" fill="#546E7A" text-anchor="middle">constraints</text>
+      <text x="67" y="64" font-size="8" fill="#546E7A" text-anchor="middle">FOLLOWS edges</text>
+      <text x="67" y="74" font-size="8" fill="#546E7A" text-anchor="middle">INTERESTED_IN</text>
+    </g>
+
+    <!-- Arrows between notebooks -->
+    <line x1="555" y1="585" x2="568" y2="585" stroke="#FF3621" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="703" y1="585" x2="716" y2="585" stroke="#FF3621" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="851" y1="585" x2="864" y2="585" stroke="#FF3621" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- ML notebook -->
+    <g transform="translate(420,640)" filter="url(#shadow)">
+      <rect width="580" height="55" rx="6" fill="white" stroke="#FFCCBC"/>
+      <rect x="0" y="0" width="60" height="55" rx="6" fill="#7E57C2"/>
+      <text x="30" y="33" font-size="18" fill="white" text-anchor="middle">🧠</text>
+      <text x="70" y="22" font-size="12" font-weight="700" fill="#263238">05 · ML models (opcional · respeta LAB_ML)</text>
+      <text x="70" y="36" font-size="10" fill="#546E7A">spam_detector · churn_predictor · engagement · virality</text>
+      <text x="70" y="48" font-size="10" fill="#546E7A">follow_recommender · user_clustering   ·   scaffolds en src/spark/models_ex/</text>
+    </g>
+
+    <!-- Sin Workflow note (CE no lo soporta) -->
+    <g transform="translate(420,710)">
+      <rect width="580" height="45" rx="6" fill="#FBE9E7" stroke="#FF5A3C" stroke-dasharray="4 3"/>
+      <text x="30" y="22" font-size="11" fill="#BF360C">⚠</text>
+      <text x="50" y="22" font-size="11" font-weight="700" fill="#BF360C">CE no tiene Jobs/Workflows</text>
+      <text x="50" y="38" font-size="10" fill="#BF360C">El alumno ejecuta el notebook 00_run_all.py manualmente desde la UI · no hay scheduler ni email automático</text>
+    </g>
+
+    <!-- Databricks footer note -->
+    <g transform="translate(420,775)">
+      <rect width="580" height="60" rx="6" fill="white" stroke="#FFCCBC"/>
+      <text x="14" y="20" font-size="11" font-weight="700" fill="#BF360C">Limitaciones de Community Edition</text>
+      <text x="14" y="36" font-size="10" fill="#546E7A">• Sin Unity Catalog · sin Secret Scopes · sin Jobs/Workflows · sin CLI funcional</text>
+      <text x="14" y="50" font-size="10" fill="#546E7A">• Single-node 6 GB RAM · cluster auto-apaga 2 h · libs Maven hay que reinstalar al rearrancar</text>
+    </g>
+  </g>
+
+  <!-- ============ MONGODB ATLAS M0 ZONE ============ -->
+  <g>
+    <rect x="1070" y="95" width="510" height="380" rx="10" fill="#E3F1EA" stroke="#00684A" stroke-width="1.5"/>
+    <rect x="1070" y="95" width="510" height="30" rx="10" fill="#00684A"/>
+    <rect x="1070" y="115" width="510" height="10" fill="#00684A"/>
+    <text x="1088" y="115" font-size="13" font-weight="700" fill="white">🟢  MongoDB Atlas · M0 Shared (Free Forever · 512 MB)</text>
+
+    <g transform="translate(1090,145)">
+      <text x="0" y="14" font-size="11" font-weight="700" fill="#00684A">Cluster compartido (1 nodo lógico)</text>
+      <circle cx="170" cy="58" r="34" fill="url(#gMongo)" filter="url(#shadow)"/>
+      <text x="170" y="55" font-size="10" font-weight="700" fill="white" text-anchor="middle">M0 Shared</text>
+      <text x="170" y="69" font-size="9" fill="white" text-anchor="middle">512 MB · TLS</text>
+      <text x="170" y="105" font-size="9" font-style="italic" fill="#558B2F" text-anchor="middle">sin replica set en M0 · sin pause/resume · siempre on</text>
+    </g>
+
+    <text x="1090" y="235" font-size="11" font-weight="700" fill="#00684A">Database: sociallab</text>
+
+    <g transform="translate(1090,245)">
+      <g transform="translate(0,0)">
+        <rect width="115" height="44" rx="4" fill="white" stroke="#A5D6A7"/>
+        <text x="57" y="18" font-size="11" font-weight="700" fill="#263238" text-anchor="middle">users</text>
+        <text x="57" y="34" font-size="9" fill="#546E7A" text-anchor="middle">origin: seed|live</text>
+      </g>
+      <g transform="translate(125,0)">
+        <rect width="115" height="44" rx="4" fill="white" stroke="#A5D6A7"/>
+        <text x="57" y="18" font-size="11" font-weight="700" fill="#263238" text-anchor="middle">posts</text>
+        <text x="57" y="34" font-size="9" fill="#546E7A" text-anchor="middle">hashtags · mentions</text>
+      </g>
+      <g transform="translate(250,0)">
+        <rect width="115" height="44" rx="4" fill="white" stroke="#A5D6A7"/>
+        <text x="57" y="18" font-size="11" font-weight="700" fill="#263238" text-anchor="middle">likes</text>
+        <text x="57" y="34" font-size="9" fill="#546E7A" text-anchor="middle">user_id · post_id</text>
+      </g>
+      <g transform="translate(375,0)">
+        <rect width="115" height="44" rx="4" fill="white" stroke="#A5D6A7"/>
+        <text x="57" y="18" font-size="11" font-weight="700" fill="#263238" text-anchor="middle">follows</text>
+        <text x="57" y="34" font-size="9" fill="#546E7A" text-anchor="middle">follower → followee</text>
+      </g>
+      <g transform="translate(0,54)">
+        <rect width="115" height="44" rx="4" fill="white" stroke="#A5D6A7"/>
+        <text x="57" y="18" font-size="11" font-weight="700" fill="#263238" text-anchor="middle">user_stats</text>
+        <text x="57" y="34" font-size="9" fill="#546E7A" text-anchor="middle">gold agregado</text>
+      </g>
+      <g transform="translate(125,54)">
+        <rect width="115" height="44" rx="4" fill="white" stroke="#A5D6A7"/>
+        <text x="57" y="18" font-size="11" font-weight="700" fill="#263238" text-anchor="middle">hashtag_trends</text>
+        <text x="57" y="34" font-size="9" fill="#546E7A" text-anchor="middle">gold agregado</text>
+      </g>
+      <g transform="translate(250,54)">
+        <rect width="115" height="44" rx="4" fill="white" stroke="#A5D6A7"/>
+        <text x="57" y="18" font-size="11" font-weight="700" fill="#263238" text-anchor="middle">events</text>
+        <text x="57" y="34" font-size="9" fill="#546E7A" text-anchor="middle">live writes</text>
+      </g>
+      <g transform="translate(375,54)">
+        <rect width="115" height="44" rx="4" fill="#F1F8E9" stroke="#C5E1A5" stroke-dasharray="3 2"/>
+        <text x="57" y="24" font-size="10" font-style="italic" fill="#558B2F" text-anchor="middle">índices auto</text>
+        <text x="57" y="37" font-size="8" fill="#7CB342" text-anchor="middle">username · hashtags</text>
+      </g>
+    </g>
+
+    <g transform="translate(1090,365)">
+      <rect width="490" height="90" rx="6" fill="white" stroke="#A5D6A7"/>
+      <text x="14" y="20" font-size="11" font-weight="700" fill="#00684A">🔐 Seguridad / Limitaciones M0</text>
+      <text x="14" y="38" font-size="10" fill="#546E7A">• Network: 0.0.0.0/0 durante la clase (CE no tiene IP fija) · TLS obligatorio</text>
+      <text x="14" y="54" font-size="10" fill="#546E7A">• Usuarios DB: <tspan font-family="monospace">sociallab_app</tspan> (rw, ETL+app) · <tspan font-family="monospace">sociallab_ro</tspan> (lectura, alumnos)</text>
+      <text x="14" y="70" font-size="10" fill="#546E7A">• 1 cluster M0 por proyecto · 1 proyecto por cuenta gratuita · sin backup</text>
+      <text x="14" y="84" font-size="10" fill="#546E7A">• 512 MB encaja con dataset (~300 MB · margen 40 %)</text>
+    </g>
+  </g>
+
+  <!-- ============ NEO4J AURA FREE ZONE ============ -->
+  <g>
+    <rect x="1070" y="495" width="510" height="360" rx="10" fill="#E8EFF7" stroke="#4581C3" stroke-width="1.5"/>
+    <rect x="1070" y="495" width="510" height="30" rx="10" fill="#4581C3"/>
+    <rect x="1070" y="515" width="510" height="10" fill="#4581C3"/>
+    <text x="1088" y="515" font-size="13" font-weight="700" fill="white">🔵  Neo4j AuraDB Free · 200k nodos / 400k relaciones</text>
+
+    <g transform="translate(1090,550)">
+      <text x="0" y="14" font-size="11" font-weight="700" fill="#2A5A8C">Modelo de grafo</text>
+      <circle cx="90" cy="80" r="26" fill="url(#gNeo)" filter="url(#shadow)"/>
+      <text x="90" y="78" font-size="8" font-weight="700" fill="white" text-anchor="middle">User</text>
+      <text x="90" y="90" font-size="7" fill="white" text-anchor="middle">@ana</text>
+      <circle cx="230" cy="55" r="26" fill="url(#gNeo)" filter="url(#shadow)"/>
+      <text x="230" y="53" font-size="8" font-weight="700" fill="white" text-anchor="middle">User</text>
+      <text x="230" y="65" font-size="7" fill="white" text-anchor="middle">@luis</text>
+      <circle cx="230" cy="135" r="26" fill="url(#gNeo)" filter="url(#shadow)"/>
+      <text x="230" y="133" font-size="8" font-weight="700" fill="white" text-anchor="middle">User</text>
+      <text x="230" y="145" font-size="7" fill="white" text-anchor="middle">@marta</text>
+      <rect x="355" y="60" width="100" height="36" rx="18" fill="#7986CB" filter="url(#shadow)"/>
+      <text x="405" y="75" font-size="10" font-weight="700" fill="white" text-anchor="middle">Hashtag</text>
+      <text x="405" y="89" font-size="9" fill="white" text-anchor="middle">#databricks</text>
+      <rect x="355" y="115" width="100" height="36" rx="18" fill="#7986CB" filter="url(#shadow)"/>
+      <text x="405" y="130" font-size="10" font-weight="700" fill="white" text-anchor="middle">Hashtag</text>
+      <text x="405" y="144" font-size="9" fill="white" text-anchor="middle">#mongodb</text>
+      <line x1="114" y1="70" x2="205" y2="60" stroke="#4581C3" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <text x="155" y="55" font-size="8" fill="#4581C3" font-style="italic">FOLLOWS</text>
+      <line x1="114" y1="90" x2="205" y2="125" stroke="#4581C3" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <text x="145" y="115" font-size="8" fill="#4581C3" font-style="italic">FOLLOWS</text>
+      <line x1="250" y1="75" x2="350" y2="78" stroke="#7986CB" stroke-width="1.5" stroke-dasharray="3 2" marker-end="url(#arrow)"/>
+      <text x="285" y="65" font-size="8" fill="#3F51B5" font-style="italic">INTERESTED_IN</text>
+      <line x1="250" y1="130" x2="350" y2="130" stroke="#7986CB" stroke-width="1.5" stroke-dasharray="3 2" marker-end="url(#arrow)"/>
+      <text x="285" y="150" font-size="8" fill="#3F51B5" font-style="italic">INTERESTED_IN</text>
+    </g>
+
+    <g transform="translate(1090,740)">
+      <rect width="490" height="100" rx="6" fill="white" stroke="#B0BEC5"/>
+      <text x="14" y="20" font-size="11" font-weight="700" fill="#2A5A8C">Constraints · Limitaciones Free</text>
+      <text x="14" y="38" font-size="9" font-family="monospace" fill="#37474F">CREATE CONSTRAINT user_id FOR (u:User) REQUIRE u.id IS UNIQUE</text>
+      <text x="14" y="52" font-size="9" font-family="monospace" fill="#37474F">CREATE CONSTRAINT hashtag_name FOR (h:Hashtag) REQUIRE h.name IS UNIQUE</text>
+      <text x="14" y="72" font-size="10" fill="#546E7A">• Auto-pausa tras 3 días · primera query del día tarda ~30 s</text>
+      <text x="14" y="86" font-size="10" fill="#546E7A">• Sin backup · sin Graph Data Science (Louvain etc. no disponibles en Free)</text>
+    </g>
+  </g>
+
+  <!-- ============ FLOW ARROWS with step numbers ============ -->
+
+  <!-- Step 1: Seed output local -->
+  <g>
+    <path d="M 320 285 L 345 285" fill="none" stroke="#37474F" stroke-width="2" marker-end="url(#arrow)"/>
+    <circle cx="335" cy="268" r="11" fill="#FF5A3C"/>
+    <text x="335" y="272" font-size="11" font-weight="700" fill="white" text-anchor="middle">1</text>
+  </g>
+
+  <!-- Step 2: Upload local UI/wget → DBFS (raw) -->
+  <g>
+    <path d="M 320 595 Q 390 250 435 250" fill="none" stroke="#37474F" stroke-width="2" marker-end="url(#arrow)"/>
+    <circle cx="370" cy="420" r="11" fill="#FF5A3C"/>
+    <text x="370" y="424" font-size="11" font-weight="700" fill="white" text-anchor="middle">2</text>
+    <text x="380" y="400" font-size="10" fill="#37474F">Upload UI / wget</text>
+    <text x="380" y="413" font-size="9" fill="#546E7A">→ dbfs:/FileStore/.../raw/</text>
+  </g>
+
+  <!-- Step 3: raw → notebook 01 -->
+  <g>
+    <path d="M 530 315 Q 490 440 490 540" fill="none" stroke="#37474F" stroke-width="2" marker-end="url(#arrow)"/>
+    <circle cx="510" cy="430" r="11" fill="#FF5A3C"/>
+    <text x="510" y="434" font-size="11" font-weight="700" fill="white" text-anchor="middle">3</text>
+    <text x="525" y="435" font-size="10" fill="#37474F">read raw</text>
+  </g>
+
+  <!-- Step 4: notebook 01/02 write → silver & gold -->
+  <g>
+    <path d="M 620 540 Q 680 420 720 315" fill="none" stroke="#37474F" stroke-width="2" marker-end="url(#arrow)"/>
+    <circle cx="680" cy="430" r="11" fill="#FF5A3C"/>
+    <text x="680" y="434" font-size="11" font-weight="700" fill="white" text-anchor="middle">4</text>
+    <text x="695" y="420" font-size="10" fill="#37474F">write silver + gold</text>
+  </g>
+
+  <!-- Step 5: Databricks → Atlas M0 -->
+  <g>
+    <path d="M 851 580 Q 1020 450 1070 310" fill="none" stroke="#37474F" stroke-width="2" marker-end="url(#arrow)"/>
+    <circle cx="1000" cy="430" r="11" fill="#FF5A3C"/>
+    <text x="1000" y="434" font-size="11" font-weight="700" fill="white" text-anchor="middle">5</text>
+    <text x="1015" y="465" font-size="10" fill="#37474F">mongo-spark</text>
+  </g>
+
+  <!-- Step 6: Databricks → Aura Free -->
+  <g>
+    <path d="M 999 582 Q 1040 650 1070 670" fill="none" stroke="#37474F" stroke-width="2" marker-end="url(#arrow)"/>
+    <circle cx="1035" cy="625" r="11" fill="#FF5A3C"/>
+    <text x="1035" y="629" font-size="11" font-weight="700" fill="white" text-anchor="middle">6</text>
+    <text x="1000" y="615" font-size="10" fill="#37474F">neo4j-spark</text>
+  </g>
+
+  <!-- Step 7: FastAPI → Atlas -->
+  <g>
+    <path d="M 320 390 Q 700 80 1070 240" fill="none" stroke="#37474F" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#arrow)"/>
+    <circle cx="700" cy="108" r="11" fill="#FF5A3C"/>
+    <text x="700" y="112" font-size="11" font-weight="700" fill="white" text-anchor="middle">7</text>
+    <text x="715" y="98" font-size="10" fill="#37474F">motor async · mongodb+srv://</text>
+  </g>
+
+  <!-- Step 8: FastAPI → Aura -->
+  <g>
+    <path d="M 320 430 Q 700 870 1070 700" fill="none" stroke="#37474F" stroke-width="2" stroke-dasharray="6 3" marker-end="url(#arrow)"/>
+    <circle cx="720" cy="885" r="11" fill="#FF5A3C"/>
+    <text x="720" y="889" font-size="11" font-weight="700" fill="white" text-anchor="middle">8</text>
+    <text x="735" y="865" font-size="10" fill="#37474F">neo4j driver · neo4j+s://</text>
+  </g>
+
+  <!-- Step 9: Browser → FastAPI -->
+  <g>
+    <path d="M 190 470 Q 190 460 190 450" fill="none" stroke="#37474F" stroke-width="2" marker-end="url(#arrow)"/>
+    <circle cx="220" cy="462" r="11" fill="#FF5A3C"/>
+    <text x="220" y="466" font-size="11" font-weight="700" fill="white" text-anchor="middle">9</text>
+  </g>
+
+  <!-- Widgets dashed feeds (sustituyen Secret Scope feeds) -->
+  <line x1="560" y1="405" x2="780" y2="540" stroke="#78909C" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowLight)"/>
+  <line x1="560" y1="405" x2="920" y2="540" stroke="#78909C" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowLight)"/>
+
+  <!-- ============ FOOTER STEP DESCRIPTION ============ -->
+  <g transform="translate(30,895)">
+    <rect width="1540" height="110" rx="6" fill="#FAFAFA" stroke="#CFD8DC"/>
+    <text x="20" y="24" font-size="12" font-weight="700" fill="#263238">Flujo del pipeline (modo gratuito)</text>
+    <text x="20" y="44" font-size="11" fill="#37474F">
+      <tspan font-weight="700" fill="#FF5A3C">1</tspan> Seed local genera NDJSON sucio en <tspan font-family="monospace">./data/raw/</tspan>   ·
+      <tspan font-weight="700" fill="#FF5A3C"> 2</tspan> Alumno sube a DBFS via UI o <tspan font-family="monospace">wget</tspan> en notebook   ·
+      <tspan font-weight="700" fill="#FF5A3C"> 3</tspan> Notebook 01 lee raw   ·
+      <tspan font-weight="700" fill="#FF5A3C"> 4</tspan> Silver + gold escritos en el mismo DBFS
+    </text>
+    <text x="20" y="62" font-size="11" fill="#37474F">
+      <tspan font-weight="700" fill="#FF5A3C">5</tspan> Notebook 03 carga colecciones en Atlas M0 vía mongo-spark-connector   ·
+      <tspan font-weight="700" fill="#FF5A3C"> 6</tspan> Notebook 04 carga nodos y relaciones en Aura Free vía neo4j-spark
+    </text>
+    <text x="20" y="80" font-size="11" fill="#37474F">
+      <tspan font-weight="700" fill="#FF5A3C">7</tspan> FastAPI local lee/escribe en Atlas (origin="live")   ·
+      <tspan font-weight="700" fill="#FF5A3C"> 8</tspan> FastAPI consulta Aura para recomendaciones   ·
+      <tspan font-weight="700" fill="#FF5A3C"> 9</tspan> Navegador del alumno interactúa con la SPA servida por FastAPI
+    </text>
+    <text x="20" y="100" font-size="10" font-style="italic" fill="#2E7D32">
+      Plan 100% gratuito · 0 € · 3 servicios free a provisionar (Databricks CE · Atlas M0 · Aura Free) · setup ~22 min · alumno arranca con <tspan font-family="monospace">./lab.sh cloud</tspan>
+    </text>
+  </g>
+</svg>

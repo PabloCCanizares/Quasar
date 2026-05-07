@@ -1,0 +1,29 @@
+# SocialLab — modo cloud (free tier).
+#
+# Levanta SOLO el contenedor de la app. MongoDB y Neo4j viven en
+# Atlas / Aura, no se arrancan contenedores locales.
+#
+# Uso:
+#   ./lab.sh cloud
+#
+# o manualmente:
+#   docker compose -f docker-compose.cloud.yml up -d --build
+#
+# Requiere un .env.cloud relleno (copia .env.cloud.example y completa).
+
+services:
+  app:
+    build: .
+    container_name: sociallab-app-cloud
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.cloud
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+      - spark_ivy_cloud:/root/.ivy2
+    restart: unless-stopped
+
+volumes:
+  spark_ivy_cloud:
