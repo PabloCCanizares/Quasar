@@ -1,8 +1,19 @@
-"""PreproLab — endpoints de analytics.
+"""PreproLab — agregador de routers de bloques pedagógicos.
 
-En Fase 1 solo expone `/api/preprolab/lab/status`. Los bloques de ejercicio se
-irán añadiendo en fases posteriores, manteniendo el patrón scaffold/solution
-de SocialLab (selección del módulo según LAB_PREPROLAB en tiempo de import).
+Para cada bloque del Tema 5, decide en tiempo de import si carga la solución
+oficial (`<bloque>.py`) o el scaffold (`<bloque>_ex.py`) según la variable
+de entorno LAB_PREPROLAB (lista separada por comas con los bloques
+desbloqueados).
+
+Ejemplos:
+    LAB_PREPROLAB=                       → todo scaffold (alumno)
+    LAB_PREPROLAB=eda                    → EDA resuelto, resto scaffold
+    LAB_PREPROLAB=eda,missing            → EDA + missing resueltos
+    LAB_PREPROLAB=all                    → todo resuelto
+
+Cada vez que se cambia el flag con `./lab.sh preprolab unlock|lock`, el
+script reinicia el contenedor app-preprolab para que esta selección se
+vuelva a evaluar.
 """
 
 import os
@@ -36,16 +47,25 @@ def _unlocked() -> set[str]:
 _unlocked_blocks = _unlocked()
 
 
+# --- Bloque eda ---
+if "eda" in _unlocked_blocks:
+    from src.web.routes import eda as _eda
+else:
+    from src.web.routes import eda_ex as _eda
+router.include_router(_eda.router)
+
+# Los otros bloques se irán incluyendo en sus fases:
+#   if "missing" in _unlocked_blocks: from src.web.routes import missing
+#   else:                              from src.web.routes import missing_ex
+#   ...
+
+
 @router.get("/api/preprolab/lab/status")
 async def lab_status():
-    """Estado actual del laboratorio: qué bloques están desbloqueados.
-
-    El frontend lo consulta al arrancar para mostrar en el sidebar qué bloques
-    estan resueltos vs en modo ejercicio.
-    """
+    """Estado actual del laboratorio: qué bloques están desbloqueados."""
     return {
         "app": "preprolab",
         "blocks": {b: (b in _unlocked_blocks) for b in BLOCKS},
-        "phase": 1,
-        "note": "Esqueleto inicial. Los bloques se implementaran en fases posteriores.",
+        "phase": 3,
+        "note": "Bloques implementados hasta ahora: eda. Próximos: missing, outliers, ...",
     }

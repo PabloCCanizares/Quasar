@@ -131,6 +131,7 @@ body {
     color: #1d9bf0;
     margin-bottom: 8px;
 }
+.content code,
 .content .placeholder code {
     background: #0f1419;
     padding: 2px 6px;
@@ -138,4 +139,158 @@ body {
     font-family: "SF Mono", Consolas, monospace;
     font-size: 13px;
     color: #ffd166;
+}
+
+/* ------- EDA dashboard ------- */
+.content h2 {
+    margin-top: 4px;
+    margin-bottom: 14px;
+    font-size: 18px;
+    color: #fff;
+}
+.content h3 {
+    margin-bottom: 10px;
+    font-size: 15px;
+    color: #d7dadc;
+}
+
+.card {
+    background: #16191c;
+    border: 1px solid #2f3336;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+}
+
+.badge {
+    display: inline-block;
+    background: #00ba7c;
+    color: #0f1419;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 10px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+}
+.badge.scaffold {
+    background: #ffd166;
+    color: #0f1419;
+}
+
+.row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.row label {
+    font-size: 13px;
+    color: #71767b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.row select {
+    background: #0f1419;
+    color: #e7e9ea;
+    border: 1px solid #2f3336;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    min-width: 250px;
+}
+
+.table-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.tbtn {
+    background: #0f1419;
+    color: #d7dadc;
+    border: 1px solid #2f3336;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+.tbtn:hover {
+    border-color: #1d9bf0;
+}
+.tbtn.active {
+    background: #1d9bf0;
+    color: #fff;
+    border-color: #1d9bf0;
+}
+
+table.kv {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+}
+table.kv th, table.kv td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid #2f3336;
+}
+table.kv th {
+    color: #71767b;
+    font-weight: 600;
+    background: #0f1419;
+}
+table.kv td {
+    color: #d7dadc;
+}
+table.kv td.sample {
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 11px;
+    color: #71767b;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+table.stats-table {
+    width: auto;
+    margin: 10px 0;
+}
+table.stats-table th {
+    text-align: right;
+    padding-right: 12px;
+}
+
+.exercise-placeholder {
+    background: #1c1f24;
+    border: 1px dashed #ffd166;
+    border-radius: 8px;
+    padding: 18px;
+    color: #d7dadc;
+}
+.exercise-placeholder strong { color: #ffd166; }
+
+.hints {
+    background: #0f1419;
+    border-left: 3px solid #1d9bf0;
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 13px;
+}
+.hints ul {
+    margin: 6px 0 0 18px;
+    color: #d7dadc;
+}
+
+.error {
+    color: #ff6b6b;
+    padding: 8px 12px;
+    background: #2a1a1a;
+    border-radius: 6px;
+}
+.loading {
+    color: #71767b;
+    font-style: italic;
 }
