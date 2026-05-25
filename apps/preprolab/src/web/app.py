@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from src.web.database import get_async_client, get_db
+from src.web.database import get_async_client
 from src.web.routes import analytics
 
 WEB_DIR = Path(__file__).parent

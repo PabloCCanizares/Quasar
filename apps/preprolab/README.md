@@ -6,14 +6,14 @@
 
 PreproLab implementa todas las técnicas del temario sobre un dataset sintético construido a propósito: una **flota de robots autónomos con mantenimiento predictivo**. El escenario incluye intencionadamente los 10 tipos de problemas que el alumno tiene que resolver: valores perdidos (MCAR/MAR/MNAR), outliers de tres tipos, class noise, duplicados, fechas en formatos múltiples, encoding roto, multivaluadas, redundancia entre atributos, etc.
 
-## Estado actual: Fase 2 (dataset sintético generado)
+## Estado actual: Fase 3 (bloque EDA operativo)
 
-El chasis del laboratorio está montado y el generador del dataset funciona. Los bloques pedagógicos se irán implementando en fases siguientes.
+Dataset generado y primer bloque (EDA) completamente funcional con UI Plotly. Los bloques restantes se irán implementando en fases siguientes.
 
 | Bloque | Técnicas planificadas | Estado |
 |---|---|---|
-| **Seed** | Generador de la flota de robots (4 tablas, 12 problemas inyectados) | **Fase 2 OK** |
-| `eda` | Univariable, bivariable, correlaciones, missing matrix | Fase 3 |
+| **Seed** | Generador de la flota de robots (4 tablas, 14 problemas inyectados) | **Fase 2 OK** |
+| `eda` | Univariable, missing matrix, correlaciones — UI con Plotly | **Fase 3 OK** |
 | `missing` | Diagnóstico MCAR/MAR/MNAR + Imputer (media/mediana), KNNI, KMI, MICE | Fase 4 |
 | `outliers` | IQR, Z-score, boxplot + EF/CVCF/IPF noise filters | Fase 5 |
 | `integration` | union, 4 tipos de joins, correlaciones para dedup | Fase 6 |
@@ -22,6 +22,20 @@ El chasis del laboratorio está montado y el generador del dataset funciona. Los
 | `reduce_dim` | PCA, t-SNE, AutoEncoders + feature selection (filter/wrapper/embedded) | Fase 9 |
 | `reduce_inst` | SRSWOR, estratificado, balanceado, K-Means compresión | Fase 10 |
 | **Pipeline Studio** | UI para componer pipelines y comparar AUC/F1 sobre mismo modelo | Fase 11 |
+
+### Bloque EDA (Fase 3) — detalle
+
+Tres ejercicios scaffold/solución, todos sobre las 4 tablas del seed:
+
+| Ejercicio | Endpoint | Qué calcula |
+|---|---|---|
+| EDA-1 | `GET /api/preprolab/eda/univariate/{tabla}/{columna}` | Media, mediana, std, min/max, Q1/Q3, histograma (numérica) o value_counts (categórica), + detección rápida IQR |
+| EDA-2 | `GET /api/preprolab/eda/missing/{tabla}` | % null por columna + co-ocurrencia de nulls + interpretación heurística MCAR/MAR/MNAR |
+| EDA-3 | `GET /api/preprolab/eda/correlations/{tabla}` | Matriz Pearson + pares más correlacionados + redundantes (|r| > 0.9) |
+
+Endpoints no-gateados (siempre disponibles): `overview` y `schema/{tabla}`.
+
+Frontend: tab EDA con selector de tabla, histogramas (Plotly bars), missing matrix visual, heatmap de correlaciones interactivo.
 
 **Total previsto**: ~30 ejercicios con patrón scaffold/solución.
 
