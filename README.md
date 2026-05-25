@@ -1,6 +1,6 @@
 # Quasar
 
-![Quasar — Plataforma docente de Big Data + IA](docs/assets/quasar-banner.png)
+![Quasar — Plataforma docente de Big Data + IA](docs/assets/banner.png)
 
 > Plataforma docente de **Big Data + IA** para la asignatura de Tratamiento y Gestión de Datos Masivos.
 > Un único stack poliglota (MongoDB + Neo4j + Spark + FastAPI) que aloja **varias aplicaciones independientes**, cada una enseñando un caso de uso distinto del mismo temario.
