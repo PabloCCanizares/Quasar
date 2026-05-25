@@ -6,16 +6,16 @@
 
 PreproLab implementa todas las técnicas del temario sobre un dataset sintético construido a propósito: una **flota de robots autónomos con mantenimiento predictivo**. El escenario incluye intencionadamente los 10 tipos de problemas que el alumno tiene que resolver: valores perdidos (MCAR/MAR/MNAR), outliers de tres tipos, class noise, duplicados, fechas en formatos múltiples, encoding roto, multivaluadas, redundancia entre atributos, etc.
 
-## Estado actual: Fase 4 (bloque missing operativo)
+## Estado actual: Fase 5 (bloque outliers operativo)
 
-Dataset generado, EDA y missing funcionales. Los bloques restantes se irán implementando en fases siguientes.
+Dataset generado, EDA + missing + outliers funcionales. Los bloques restantes se irán implementando en fases siguientes.
 
 | Bloque | Técnicas planificadas | Estado |
 |---|---|---|
 | **Seed** | Generador de la flota de robots (4 tablas, 14 problemas inyectados) | **Fase 2 OK** |
 | `eda` | Univariable, missing matrix, correlaciones — UI con Plotly | **Fase 3 OK** |
 | `missing` | Drop + simple (mean/median/mode) + KNN + KMeans + comparativa antes/después | **Fase 4 OK** |
-| `outliers` | IQR, Z-score, boxplot + EF/CVCF/IPF noise filters | Fase 5 |
+| `outliers` | IQR + Z-score + gestión (remove/cap/log) + noise filters EF/CVCF/IPF | **Fase 5 OK** |
 | `integration` | union, 4 tipos de joins, correlaciones para dedup | Fase 6 |
 | `transform` | One-hot, ordinal, multi-flag, discretización (3 métodos), pivot/groupby | Fase 7 |
 | `normalize` | Z-score, Min-Max, Robust, Decimal — comparados sobre mismo modelo | Fase 8 |
@@ -68,6 +68,33 @@ Validación verificada sobre `robots.battery_health_v2` (27.91% null por MAR del
 | KMeans k=5 | 0.1448 | -14.9% |
 
 El alumno ve numérica y visualmente por qué KNN/KMeans son mejores que mean/median: capturan correlaciones con otras features (especialmente firmware_version, que es la causa real del MAR).
+
+### Bloque OUTLIERS (Fase 5) — detalle
+
+Cuatro ejercicios sobre detección/gestión de outliers numéricos + class noise filters:
+
+| Ejercicio | Endpoint | Técnica |
+|---|---|---|
+| OUTLIERS-1 | `GET /api/preprolab/outliers/detect_iqr/{tabla}/{columna}?multiplier=N` | IQR: Q1 - N·IQR / Q3 + N·IQR (N=1.5 clásico) + boxplot data |
+| OUTLIERS-2 | `GET /api/preprolab/outliers/detect_zscore/{tabla}/{columna}?threshold=T` | Z-score: outlier si |z| > T (T=3.0 default) |
+| OUTLIERS-3 | `GET /api/preprolab/outliers/handle/{tabla}/{columna}?strategy=remove\|cap\|log` | Gestión: eliminar filas, winsorize, log-transform |
+| OUTLIERS-4 | `GET /api/preprolab/outliers/noise_filter/{tabla}?method=ef\|cvcf\|ipf&inject_noise_pct=X` | Noise Filters del Tema 5 con validación opcional con ground truth |
+
+Validación verificada sobre `sensors_readings.temperatura` (491 valores =1000°C inyectados como outliers de medición, 0.5%):
+
+- **IQR mult=1.5**: bounds [-0.3, 80.5], detecta 673 outliers (0.68% — incluye los 1000°C y algunos extremos válidos a 85°C).
+- **Z-score th=3.0**: detecta 491 (los 1000°C puros, con z=13.92).
+- **cap (winsorize) tras IQR**: std baja de 68.63 → 12.00, max de 1000 → 80.5. Dataset completo preservado.
+
+Y para `robots.failure_next_48h` con 10% ruido inyectado a propósito (ground truth conocido):
+
+| Filter | Detectados | Recall | Precision | F1 | Iteraciones |
+|---|---|---|---|---|---|
+| **EF** (conservador, 3 clasificadores) | 16.75% | 0.558 | 0.332 | 0.416 | 1 |
+| **CVCF** (moderado, k DecisionTree por mayoría) | 17.46% | 0.575 | 0.328 | 0.418 | 1 |
+| **IPF** (agresivo, iterativo hasta convergencia) | 19.58% | 0.593 | 0.302 | 0.400 | 5 |
+
+Coherente con el PDF: recall sube monotónicamente al pasar de conservador → moderado → agresivo, y precision baja por más falsos positivos. El parámetro `inject_noise_pct` permite al alumno validar la calidad del detector con ground truth, no solo creérsela.
 
 **Total previsto**: ~30 ejercicios con patrón scaffold/solución.
 
