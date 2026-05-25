@@ -5,7 +5,7 @@
 
 const BLOCK_INFO = {
     eda:          { label: "EDA",               desc: "Analisis univariable + missing matrix + correlaciones.",   render: renderEDA },
-    missing:      { label: "Valores perdidos",  desc: "Diagnostico MCAR/MAR/MNAR + imputacion (media, KNN, K-Means, EM, MICE)." },
+    missing:      { label: "Valores perdidos",  desc: "Diagnostico MCAR/MAR/MNAR + imputacion (media, KNN, K-Means, EM, MICE).", render: renderMissing },
     outliers:     { label: "Outliers + ruido",  desc: "IQR, Z-score, boxplot + noise filters (EF/CVCF/IPF)." },
     integration:  { label: "Integracion",       desc: "union, joins (4 tipos), correlaciones para deduplicar." },
     transform:    { label: "Transformacion",    desc: "One-hot, ordinal, multi-flag, discretizacion, pivot/groupby." },
@@ -417,6 +417,372 @@ async function loadCorrelations(table) {
         cont.innerHTML = html;
         el.appendChild(cont);
     }
+}
+
+// ============================================================
+// Render del bloque MISSING (Fase 4)
+// ============================================================
+
+let MISSING_TABLE = "robots";
+let MISSING_COLUMN = null;
+
+async function renderMissing() {
+    const content = document.getElementById("content");
+    content.innerHTML = `
+        <h1>Valores perdidos — imputación</h1>
+        <p class="muted">Bloque missing. Aplica las 4 técnicas del Tema 5: drop, simple (mean/median/mode), KNN, K-Means. El endpoint <strong>compare</strong> ejecuta todos sobre la misma columna y enseña visualmente cómo cada uno distorsiona la distribución.</p>
+
+        <section class="card">
+            <h2>Tabla y columna a imputar</h2>
+            <div class="table-selector" id="missing-table-selector"></div>
+            <div class="row" style="margin-top:14px">
+                <label>Columna con nulls:
+                    <select id="missing-column"></select>
+                </label>
+                <span id="missing-column-info" class="muted"></span>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>MISSING-1 · Drop <span class="badge" id="badge-drop">DROP</span></h2>
+            <div class="row">
+                <label>Modo:
+                    <select id="drop-mode">
+                        <option value="any">any (cualquier null)</option>
+                        <option value="all">all (todas null)</option>
+                        <option value="thresh">thresh (mín. N no-null)</option>
+                    </select>
+                </label>
+                <label>Thresh: <input type="number" id="drop-thresh" value="1" min="1" max="20" style="width:60px"></label>
+                <button class="tbtn" onclick="runDrop()">Ejecutar</button>
+            </div>
+            <div id="missing-drop-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>MISSING-2 · Imputación simple <span class="badge" id="badge-simple">SIMPLE</span></h2>
+            <div class="row">
+                <label>Estrategia:
+                    <select id="impute-simple-strategy">
+                        <option value="mean">mean</option>
+                        <option value="median">median</option>
+                        <option value="mode">mode</option>
+                    </select>
+                </label>
+                <button class="tbtn" onclick="runImputeSimple()">Imputar</button>
+            </div>
+            <div id="missing-simple-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>MISSING-3 · KNN Imputation <span class="badge" id="badge-knn">KNN</span></h2>
+            <div class="row">
+                <label>K (vecinos): <input type="number" id="knn-k" value="5" min="1" max="20" style="width:60px"></label>
+                <button class="tbtn" onclick="runImputeKnn()">Imputar</button>
+                <span class="muted">Necesita features numéricas adicionales para calcular distancia.</span>
+            </div>
+            <div id="missing-knn-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>MISSING-4 · K-Means Imputation <span class="badge" id="badge-kmeans">KMEANS</span></h2>
+            <div class="row">
+                <label>K (clusters): <input type="number" id="kmeans-k" value="5" min="2" max="20" style="width:60px"></label>
+                <button class="tbtn" onclick="runImputeKmeans()">Imputar</button>
+                <span class="muted">Recomendado por el Tema 5 para Big Data.</span>
+            </div>
+            <div id="missing-kmeans-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>MISSING-5 · Comparativa <span class="badge" id="badge-compare">COMPARE</span></h2>
+            <div class="row">
+                <button class="tbtn" onclick="runCompare()">Comparar todos los métodos</button>
+                <span class="muted">Lanza drop + mean + median + KNN + KMeans sobre la misma columna y los pinta superpuestos.</span>
+            </div>
+            <div id="missing-compare-content"></div>
+        </section>
+    `;
+
+    renderMissingTableSelector();
+    await loadColumnsWithNulls(MISSING_TABLE);
+}
+
+function renderMissingTableSelector() {
+    const sel = document.getElementById("missing-table-selector");
+    sel.innerHTML = "";
+    TABLES.forEach(t => {
+        const btn = document.createElement("button");
+        btn.textContent = t;
+        btn.className = (t === MISSING_TABLE) ? "tbtn active" : "tbtn";
+        btn.addEventListener("click", () => {
+            MISSING_TABLE = t;
+            renderMissingTableSelector();
+            loadColumnsWithNulls(t);
+        });
+        sel.appendChild(btn);
+    });
+}
+
+async function loadColumnsWithNulls(table) {
+    const data = await fetchJSON(`/api/preprolab/missing/columns_with_nulls/${table}`);
+    const sel = document.getElementById("missing-column");
+    const info = document.getElementById("missing-column-info");
+    sel.innerHTML = "";
+    if (data.error || !data.columns || data.columns.length === 0) {
+        const opt = document.createElement("option");
+        opt.textContent = "(no hay columnas con nulls en esta tabla)";
+        opt.disabled = true;
+        sel.appendChild(opt);
+        info.textContent = "";
+        MISSING_COLUMN = null;
+        return;
+    }
+    data.columns.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.column;
+        opt.textContent = `${c.column} (${c.null_pct}% null, ${c.is_numeric ? 'numérica' : 'categórica'})`;
+        opt.dataset.numeric = c.is_numeric;
+        sel.appendChild(opt);
+    });
+    sel.onchange = () => {
+        MISSING_COLUMN = sel.value;
+        info.textContent = `${data.columns.find(c => c.column === sel.value).null_count.toLocaleString()} nulls de ${data.rows.toLocaleString()} filas`;
+    };
+    MISSING_COLUMN = data.columns[0].column;
+    sel.value = MISSING_COLUMN;
+    info.textContent = `${data.columns[0].null_count.toLocaleString()} nulls de ${data.rows.toLocaleString()} filas`;
+}
+
+function _handleScaffold(data, badge, exercise, file) {
+    const el = document.getElementById(`missing-${badge}-content`);
+    const badgeEl = document.getElementById(`badge-${badge}`);
+    badgeEl.classList.add("scaffold");
+    badgeEl.textContent = `${exercise} (scaffold)`;
+    el.innerHTML = `
+        <div class="exercise-placeholder">
+            <p><strong>Ejercicio ${data.exercise} sin resolver.</strong></p>
+            <p class="muted">${data.hint}</p>
+            <p class="muted">Implementa el endpoint en <code>apps/preprolab/src/web/routes/missing_ex.py</code>.</p>
+        </div>
+    `;
+}
+
+async function runDrop() {
+    const mode = document.getElementById("drop-mode").value;
+    const thresh = document.getElementById("drop-thresh").value;
+    const url = `/api/preprolab/missing/dropna/${MISSING_TABLE}?mode=${mode}&thresh=${thresh}`;
+    const data = await fetchJSON(url);
+    if (data.error === "scaffold") return _handleScaffold(data, "drop", "MISSING-1", "missing_ex.py");
+    const el = document.getElementById("missing-drop-content");
+    const badge = document.getElementById("badge-drop");
+    badge.classList.remove("scaffold");
+    badge.textContent = "MISSING-1 (resuelto)";
+    el.innerHTML = `
+        <table class='kv stats-table'>
+            <tr><th>Filas antes</th><td>${data.rows_before.toLocaleString()}</td></tr>
+            <tr><th>Filas después</th><td>${data.rows_after.toLocaleString()}</td></tr>
+            <tr><th>Eliminadas</th><td>${data.rows_dropped.toLocaleString()} (${data.rows_dropped_pct}%)</td></tr>
+        </table>
+    `;
+}
+
+async function runImputeSimple() {
+    if (!MISSING_COLUMN) return alert("Selecciona una columna primero.");
+    const strat = document.getElementById("impute-simple-strategy").value;
+    const url = `/api/preprolab/missing/impute_simple/${MISSING_TABLE}/${MISSING_COLUMN}?strategy=${strat}`;
+    const data = await fetchJSON(url);
+    if (data.error === "scaffold") return _handleScaffold(data, "simple", "MISSING-2", "missing_ex.py");
+    if (data.error) return _showError("missing-simple-content", data);
+
+    const badge = document.getElementById("badge-simple");
+    badge.classList.remove("scaffold");
+    badge.textContent = "MISSING-2 (resuelto)";
+    _renderImputationResult("missing-simple-content", data, {label: strat});
+}
+
+async function runImputeKnn() {
+    if (!MISSING_COLUMN) return alert("Selecciona una columna primero.");
+    const k = document.getElementById("knn-k").value;
+    const url = `/api/preprolab/missing/impute_knn/${MISSING_TABLE}/${MISSING_COLUMN}?k=${k}`;
+    const data = await fetchJSON(url);
+    if (data.error === "scaffold") return _handleScaffold(data, "knn", "MISSING-3", "missing_ex.py");
+    if (data.error) return _showError("missing-knn-content", data);
+
+    const badge = document.getElementById("badge-knn");
+    badge.classList.remove("scaffold");
+    badge.textContent = "MISSING-3 (resuelto)";
+    _renderImputationResult("missing-knn-content", data, {label: `KNN k=${data.k}`, extra: data.examples});
+}
+
+async function runImputeKmeans() {
+    if (!MISSING_COLUMN) return alert("Selecciona una columna primero.");
+    const k = document.getElementById("kmeans-k").value;
+    const url = `/api/preprolab/missing/impute_kmeans/${MISSING_TABLE}/${MISSING_COLUMN}?k=${k}`;
+    const data = await fetchJSON(url);
+    if (data.error === "scaffold") return _handleScaffold(data, "kmeans", "MISSING-4", "missing_ex.py");
+    if (data.error) return _showError("missing-kmeans-content", data);
+
+    const badge = document.getElementById("badge-kmeans");
+    badge.classList.remove("scaffold");
+    badge.textContent = "MISSING-4 (resuelto)";
+    _renderImputationResult("missing-kmeans-content", data, {
+        label: `K-Means k=${data.k}`,
+        clusters: data.cluster_distribution,
+    });
+}
+
+function _showError(targetId, data) {
+    const el = document.getElementById(targetId);
+    el.innerHTML = `<p class="error">${data.detail || data.error}</p>`;
+}
+
+function _renderImputationResult(targetId, data, opts) {
+    const el = document.getElementById(targetId);
+    el.innerHTML = "";
+
+    // Stats table antes/después
+    const sb = data.stats_before;
+    const sa = data.stats_after;
+    if (sb && sa) {
+        const html = `
+            <table class='kv'>
+                <thead><tr><th></th><th>media</th><th>mediana</th><th>std</th><th>min</th><th>max</th><th>nulls</th></tr></thead>
+                <tbody>
+                    <tr><th>Antes</th><td>${sb.mean.toFixed(3)}</td><td>${sb.median.toFixed(3)}</td><td>${sb.std.toFixed(3)}</td><td>${sb.min.toFixed(2)}</td><td>${sb.max.toFixed(2)}</td><td>${data.null_count_before}</td></tr>
+                    <tr><th>Después (${opts.label})</th><td>${sa.mean.toFixed(3)}</td><td>${sa.median.toFixed(3)}</td><td>${sa.std.toFixed(3)}</td><td>${sa.min.toFixed(2)}</td><td>${sa.max.toFixed(2)}</td><td>${data.null_count_after}</td></tr>
+                </tbody>
+            </table>
+        `;
+        const tbl = document.createElement("div");
+        tbl.innerHTML = html;
+        el.appendChild(tbl);
+
+        // Varianza
+        const lossPct = (100 * (1 - sa.std / sb.std)).toFixed(1);
+        if (Math.abs(parseFloat(lossPct)) > 0.5) {
+            const w = document.createElement("p");
+            w.className = "muted";
+            w.innerHTML = `Variación de std vs original: <strong>${lossPct > 0 ? '-' : '+'}${Math.abs(lossPct)}%</strong> ${lossPct > 0 ? '(método reduce la dispersión)' : '(método aumenta la dispersión)'}`;
+            el.appendChild(w);
+        }
+    }
+
+    // Histograma superpuesto (antes vs después)
+    if (data.histogram_before && data.histogram_after) {
+        const div = document.createElement("div");
+        div.style.height = "300px";
+        el.appendChild(div);
+        const eb = data.histogram_before.bin_edges;
+        const ea = data.histogram_after.bin_edges;
+        const cb = eb.slice(0, -1).map((e, i) => (e + eb[i + 1]) / 2);
+        const ca = ea.slice(0, -1).map((e, i) => (e + ea[i + 1]) / 2);
+        Plotly.newPlot(div, [
+            {x: cb, y: data.histogram_before.counts, type: "bar", name: "Antes", marker: {color: "#71767b"}, opacity: 0.6},
+            {x: ca, y: data.histogram_after.counts,  type: "bar", name: `Después (${opts.label})`, marker: {color: "#1d9bf0"}, opacity: 0.8},
+        ], {
+            title: { text: `Distribución antes vs después — ${MISSING_COLUMN}`, font: { color: "#e7e9ea" } },
+            paper_bgcolor: "#16191c", plot_bgcolor: "#16191c",
+            font: { color: "#d7dadc" },
+            barmode: "overlay",
+            xaxis: { title: MISSING_COLUMN }, yaxis: { title: "Frecuencia" },
+            margin: { l: 50, r: 20, t: 50, b: 60 },
+        }, { displayModeBar: false });
+    }
+
+    // Distribución por cluster (solo KMeans)
+    if (opts.clusters) {
+        let html = "<h3 style='margin-top:16px'>Distribución por cluster</h3>";
+        html += "<table class='kv'><thead><tr><th>Cluster</th><th>Tamaño</th><th>Filas imputadas</th><th>Valor centroide</th></tr></thead><tbody>";
+        Object.entries(opts.clusters).forEach(([c, info]) => {
+            html += `<tr><td>${c}</td><td>${info.size.toLocaleString()}</td><td>${info.imputed_count}</td><td>${info.centroid_value}</td></tr>`;
+        });
+        html += "</tbody></table>";
+        const cont = document.createElement("div");
+        cont.innerHTML = html;
+        el.appendChild(cont);
+    }
+
+    // Ejemplos (KNN, KMeans)
+    if (opts.extra && opts.extra.length > 0) {
+        let html = "<h3 style='margin-top:16px'>Ejemplos de imputaciones (primeras 5)</h3>";
+        html += "<table class='kv'><thead><tr><th>row_id</th><th>valor imputado</th><th>contexto</th></tr></thead><tbody>";
+        opts.extra.slice(0, 5).forEach(ex => {
+            const ctx = Object.entries(ex.other_features || {}).map(([k, v]) => `${k}=${v}`).join(", ");
+            html += `<tr><td>${ex.row_id}</td><td>${ex.imputed_value}</td><td class='sample'>${ctx}</td></tr>`;
+        });
+        html += "</tbody></table>";
+        const cont = document.createElement("div");
+        cont.innerHTML = html;
+        el.appendChild(cont);
+    }
+}
+
+async function runCompare() {
+    if (!MISSING_COLUMN) return alert("Selecciona una columna primero.");
+    const el = document.getElementById("missing-compare-content");
+    el.innerHTML = "<span class='loading'>ejecutando los 4 métodos...</span>";
+    const url = `/api/preprolab/missing/compare/${MISSING_TABLE}/${MISSING_COLUMN}`;
+    const data = await fetchJSON(url);
+    if (data.error === "scaffold") return _handleScaffold(data, "compare", "MISSING-5", "missing_ex.py");
+    if (data.warning) {
+        el.innerHTML = `<p class="muted">${data.warning}</p>`;
+        return;
+    }
+    if (data.error) return _showError("missing-compare-content", data);
+
+    const badge = document.getElementById("badge-compare");
+    badge.classList.remove("scaffold");
+    badge.textContent = "MISSING-5 (resuelto)";
+
+    // Histogramas superpuestos
+    const traces = [];
+    const colors = { drop: "#71767b", mean: "#ffd166", median: "#06d6a0", knn: "#1d9bf0", kmeans: "#ef476f" };
+    Object.entries(data.methods).forEach(([name, info]) => {
+        const e = info.histogram.bin_edges;
+        const centers = e.slice(0, -1).map((x, i) => (x + e[i + 1]) / 2);
+        traces.push({
+            x: centers, y: info.histogram.counts, type: "bar",
+            name: `${name} — ${info.note}`,
+            marker: { color: colors[name] }, opacity: 0.55,
+        });
+    });
+
+    el.innerHTML = "";
+    const div = document.createElement("div");
+    div.style.height = "380px";
+    el.appendChild(div);
+    Plotly.newPlot(div, traces, {
+        title: { text: `Comparativa de imputación — ${MISSING_COLUMN}`, font: { color: "#e7e9ea" } },
+        paper_bgcolor: "#16191c", plot_bgcolor: "#16191c",
+        font: { color: "#d7dadc" },
+        barmode: "overlay",
+        xaxis: { title: MISSING_COLUMN }, yaxis: { title: "Frecuencia" },
+        legend: { orientation: "h", y: -0.3 },
+        margin: { l: 50, r: 20, t: 50, b: 100 },
+    }, { displayModeBar: false });
+
+    // Tabla de variance loss
+    let html = "<h3 style='margin-top:16px'>Pérdida de varianza vs drop (referencia)</h3>";
+    html += "<table class='kv'><thead><tr><th>Método</th><th>std</th><th>variance_loss</th></tr></thead><tbody>";
+    const dropStd = data.methods.drop.stats.std;
+    Object.entries(data.methods).forEach(([name, info]) => {
+        if (name === "drop") {
+            html += `<tr><td><strong>drop</strong></td><td>${info.stats.std.toFixed(3)}</td><td>0.0 (ref)</td></tr>`;
+        } else {
+            const loss = data.variance_loss_vs_drop[name];
+            const pct = (loss * 100).toFixed(1);
+            const cls = Math.abs(loss) < 0.05 ? "" : (loss > 0 ? "warn" : "info");
+            html += `<tr><td><strong>${name}</strong></td><td>${info.stats.std.toFixed(3)}</td><td class='${cls}'>${pct}%</td></tr>`;
+        }
+    });
+    html += "</tbody></table>";
+    if (data.interpretation) {
+        html += `<p class="muted"><strong>Mejor preserva varianza:</strong> ${data.interpretation.best_preserve_variance} · <strong>Peor:</strong> ${data.interpretation.worst_preserve_variance}</p>`;
+    }
+    const cont = document.createElement("div");
+    cont.innerHTML = html;
+    el.appendChild(cont);
 }
 
 // ============================================================
