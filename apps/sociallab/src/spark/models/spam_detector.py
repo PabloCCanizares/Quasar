@@ -17,7 +17,6 @@ Label: is_spam (0/1)
 Modelo: RandomForest + evaluación con métricas.
 """
 
-import os
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import VectorAssembler, StandardScaler
 from pyspark.ml.classification import RandomForestClassifier, GBTClassifier
@@ -25,7 +24,8 @@ from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClass
 from pyspark.ml import Pipeline
 from pyspark.sql import functions as F
 
-from src.config import SPARK_MASTER, GOLD_PATH, IS_LOCAL
+from src.config import GOLD_PATH
+from infra.shared.spark import build_spark
 
 MODEL_NAME = "spam_detector"
 
@@ -39,17 +39,7 @@ FEATURE_COLS = [
 
 
 def get_spark():
-    if IS_LOCAL:
-        java17 = "/opt/homebrew/Cellar/openjdk@17/17.0.17/libexec/openjdk.jdk/Contents/Home"
-        if os.path.exists(java17):
-            os.environ["JAVA_HOME"] = java17
-    return (
-        SparkSession.builder
-        .master(SPARK_MASTER)
-        .appName(f"SocialLab - {MODEL_NAME}")
-        .config("spark.driver.memory", "2g")
-        .getOrCreate()
-    )
+    return build_spark(f"SocialLab - {MODEL_NAME}")
 
 
 def train(spark: SparkSession = None, input_path: str = None, output_path: str = None):

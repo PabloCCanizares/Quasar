@@ -15,28 +15,18 @@ que combina señales del grafo y del contenido.
 Output: DataFrame con (user_id, recommended_id, score, reason)
 """
 
-import os
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql import Window
 
-from src.config import SPARK_MASTER, SILVER_PATH, GOLD_PATH, IS_LOCAL
+from src.config import SILVER_PATH, GOLD_PATH
+from infra.shared.spark import build_spark
 
 MODEL_NAME = "follow_recommender"
 
 
 def get_spark():
-    if IS_LOCAL:
-        java17 = "/opt/homebrew/Cellar/openjdk@17/17.0.17/libexec/openjdk.jdk/Contents/Home"
-        if os.path.exists(java17):
-            os.environ["JAVA_HOME"] = java17
-    return (
-        SparkSession.builder
-        .master(SPARK_MASTER)
-        .appName(f"SocialLab - {MODEL_NAME}")
-        .config("spark.driver.memory", "2g")
-        .getOrCreate()
-    )
+    return build_spark(f"SocialLab - {MODEL_NAME}")
 
 
 def build_recommendations(spark: SparkSession = None, silver_path: str = None,
