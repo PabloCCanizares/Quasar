@@ -68,8 +68,15 @@ else:
     from src.web.routes import outliers_ex as _outliers
 router.include_router(_outliers.router)
 
+# --- Bloque integration ---
+if "integration" in _unlocked_blocks:
+    from src.web.routes import integration as _integration
+else:
+    from src.web.routes import integration_ex as _integration
+router.include_router(_integration.router)
+
 # Los otros bloques se irán incluyendo en sus fases:
-#   if "integration" in _unlocked_blocks: from src.web.routes import integration
+#   if "transform" in _unlocked_blocks: from src.web.routes import transform
 #   ...
 
 
@@ -79,6 +86,6 @@ async def lab_status():
     return {
         "app": "preprolab",
         "blocks": {b: (b in _unlocked_blocks) for b in BLOCKS},
-        "phase": 5,
-        "note": "Bloques implementados: eda, missing, outliers. Próximos: integration, transform, ...",
+        "phase": 6,
+        "note": "Bloques implementados: eda, missing, outliers, integration. Próximos: transform, normalize, ...",
     }
