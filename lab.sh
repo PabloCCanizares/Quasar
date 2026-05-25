@@ -234,17 +234,19 @@ sociallab_cmd() {
                         ;;
                 esac
             else
-                log "Arrancando con la configuracion actual de $ENV_FILE"
+                log "Arrancando SocialLab con la configuracion actual de $ENV_FILE"
             fi
-            compose up -d --build
+            # Solo levanta SocialLab + sus dependencias (mongo, neo4j).
+            # Si PreproLab esta corriendo, no la toca.
+            compose up -d --build app-sociallab
             ok "Web:  http://localhost:8000"
             ok "Neo4j browser: http://localhost:7474  (neo4j / neo4jneo4j)"
             ;;
 
-        down)
+        down|stop)
             ensure_docker
-            log "Parando contenedores (volumenes preservados)..."
-            compose down
+            log "Parando SocialLab (mongo/neo4j siguen vivos para otras apps)..."
+            compose stop app-sociallab
             ;;
 
         cloud)
@@ -401,6 +403,192 @@ sociallab_cmd() {
 }
 
 # ==========================================================
+# PreproLab
+# ==========================================================
+
+PREPROLAB_SERVICE="app-preprolab"
+PREPROLAB_BLOCKS="eda intermediate intermediate intermediate"  # placeholder
+
+PREPROLAB_VALID_BLOCKS=(eda missing outliers integration transform normalize reduce_dim reduce_inst)
+
+preprolab_restart_app() {
+    log "Recreando el contenedor '$PREPROLAB_SERVICE' para recoger nuevos flags..."
+    compose up -d "$PREPROLAB_SERVICE"
+    ok "Listo. Recarga http://localhost:8002"
+}
+
+preprolab_usage() {
+    cat <<EOF
+PreproLab — comandos disponibles (Fase 1: esqueleto)
+
+Ciclo de vida:
+    up                          Arranca app-preprolab + dependencias (mongo, neo4j).
+    down                         Para SOLO app-preprolab (mongo/neo4j siguen vivos).
+    status                       Muestra los flags actuales y el estado.
+    restart                      Reinicia el contenedor app-preprolab.
+    logs                         Sigue logs de app-preprolab.
+
+Modo laboratorio (flags en infra/compose/.env.docker):
+    unlock <bloque>             Desbloquea un bloque (lo marca como resuelto).
+    lock   <bloque>             Vuelve a esconderlo (scaffold).
+    solutions                    Desbloquea todos los bloques.
+    exercises                    Bloquea todos los bloques (scaffold).
+  Bloques validos: eda | missing | outliers | integration | transform | normalize | reduce_dim | reduce_inst
+
+Pipeline de datos (Fase 2+, todavia no implementado):
+    seed                         Generara el dataset sintetico de robots.
+    etl                          Ejecutara los bloques del pipeline.
+
+Web PreproLab: http://localhost:8002
+
+Nota: En Fase 1 los bloques solo muestran placeholder. Se iran activando
+segun avance el roadmap del ecosistema Quasar.
+EOF
+}
+
+# Edicion del flag LAB_PREPROLAB (sin var de tipo neo4j/ml).
+update_flag_preprolab() {
+    local action="$1" block="$2"
+    python3 - "$action" "$block" "$ENV_FILE" <<'PYEOF'
+import re, sys
+
+action, block, env_file = sys.argv[1:4]
+ALL = {"eda", "missing", "outliers", "integration", "transform",
+       "normalize", "reduce_dim", "reduce_inst"}
+
+with open(env_file) as f:
+    content = f.read()
+
+m = re.search(r'^LAB_PREPROLAB=(.*)$', content, re.MULTILINE)
+current = m.group(1).strip() if m else ""
+
+if current == "all":
+    blocks = set(ALL)
+else:
+    blocks = {b.strip() for b in current.split(",") if b.strip()}
+
+if action == "unlock":
+    if block not in ALL:
+        sys.stderr.write(f"Bloque desconocido: {block}. Validos: {sorted(ALL)}\n")
+        sys.exit(2)
+    blocks.add(block)
+elif action == "lock":
+    blocks.discard(block)
+elif action == "all":
+    blocks = set(ALL)
+elif action == "none":
+    blocks = set()
+else:
+    sys.stderr.write(f"Action desconocida: {action}\n")
+    sys.exit(2)
+
+new_value = ",".join(sorted(blocks))
+content = re.sub(r'^LAB_PREPROLAB=.*$', f'LAB_PREPROLAB={new_value}', content, flags=re.MULTILINE)
+
+with open(env_file, "w") as f:
+    f.write(content)
+
+print(new_value if new_value else "(empty)")
+PYEOF
+}
+
+preprolab_cmd() {
+    local cmd="${1:-help}"
+    shift || true
+
+    case "$cmd" in
+        up)
+            ensure_docker
+            log "Arrancando PreproLab con la configuracion actual de $ENV_FILE"
+            compose up -d --build "$PREPROLAB_SERVICE"
+            ok "Web: http://localhost:8002"
+            ;;
+
+        down|stop)
+            ensure_docker
+            log "Parando PreproLab (mongo/neo4j siguen vivos para otras apps)..."
+            compose stop "$PREPROLAB_SERVICE"
+            ;;
+
+        restart)
+            ensure_docker
+            preprolab_restart_app
+            ;;
+
+        status)
+            echo
+            log "Estado del flag LAB_PREPROLAB ($ENV_FILE):"
+            grep -E '^LAB_PREPROLAB=' "$ENV_FILE" | sed 's/^/    /'
+            echo
+            log "Servicios Docker (Quasar):"
+            ensure_docker
+            compose ps 2>/dev/null | sed 's/^/    /' || warn "Compose no esta corriendo"
+            echo
+            ;;
+
+        unlock)
+            local block="${1:-}"
+            if [[ -z "$block" ]]; then
+                err "Uso: ./lab.sh preprolab unlock <bloque>"
+                echo "  Bloques: ${PREPROLAB_VALID_BLOCKS[*]}"
+                exit 1
+            fi
+            new=$(update_flag_preprolab unlock "$block")
+            ok "LAB_PREPROLAB = $new"
+            ensure_docker
+            preprolab_restart_app
+            ;;
+
+        lock)
+            local block="${1:-}"
+            if [[ -z "$block" ]]; then
+                err "Uso: ./lab.sh preprolab lock <bloque>"
+                exit 1
+            fi
+            new=$(update_flag_preprolab lock "$block")
+            ok "LAB_PREPROLAB = $new"
+            ensure_docker
+            preprolab_restart_app
+            ;;
+
+        solutions)
+            update_flag_preprolab all "" > /dev/null
+            ok "Todo desbloqueado: LAB_PREPROLAB=all"
+            ensure_docker
+            preprolab_restart_app
+            ;;
+
+        exercises)
+            update_flag_preprolab none "" > /dev/null
+            ok "Todo en modo ejercicio (scaffold)"
+            ensure_docker
+            preprolab_restart_app
+            ;;
+
+        logs)
+            ensure_docker
+            compose logs -f "$PREPROLAB_SERVICE"
+            ;;
+
+        seed|etl|train)
+            warn "Comando '$cmd' aun no implementado en Fase 1."
+            echo "  Se a\xc3\xb1adira en fases posteriores del roadmap."
+            exit 1
+            ;;
+
+        help|--help|-h|"")
+            preprolab_usage
+            ;;
+
+        *)
+            err "Comando desconocido: $cmd"
+            preprolab_usage
+            exit 1
+            ;;
+    esac
+}
+
+# ==========================================================
 # Top-level routing
 # ==========================================================
 
@@ -412,11 +600,12 @@ Uso:    ./lab.sh <app> <comando> [args]
 
 Apps disponibles:
     sociallab    Red social poliglota (Twitter + MongoDB + Neo4j + Spark ML)
-                 33 ejercicios distribuidos en 3 bloques Cypher + 3 bloques ML.
+                 33 ejercicios en 3 bloques Cypher + 3 bloques ML.
+    preprolab    Preprocesamiento clasico (Tema 5) — Fase 1 esqueleto
+                 8 bloques planificados, en construccion progresiva.
 
 Apps planificadas (proximamente):
-    preprolab    Preprocesamiento clasico del Tema 5 (Fase posterior).
-    llmprep      Limpieza de corpus + nanoGPT (Fase posterior).
+    llmprep      Limpieza de corpus + nanoGPT (Fase posterior del roadmap).
 
 Comandos comunes (varian por app):
     up [exercises|solutions]    Arranca la app
@@ -446,10 +635,12 @@ case "$app" in
     sociallab)
         sociallab_cmd "$@"
         ;;
-    preprolab|llmprep)
-        warn "La app '$app' aun no esta implementada."
+    preprolab)
+        preprolab_cmd "$@"
+        ;;
+    llmprep)
+        warn "La app 'llmprep' aun no esta implementada."
         echo "  Esta planificada para una fase posterior del roadmap de Quasar."
-        echo "  Por ahora solo 'sociallab' esta operativa."
         exit 1
         ;;
     help|--help|-h|"")

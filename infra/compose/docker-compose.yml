@@ -68,14 +68,40 @@ services:
       - "8000:8000"
     env_file:
       - .env.docker
+    environment:
+      # Específico de SocialLab — sobreescribe defaults del .env.docker.
+      WEB_PORT: "8000"
+      MONGO_DB: sociallab
     volumes:
-      # Data lake propio de SocialLab.
       - ../../infra/data/sociallab:/app/data
-      # Hot-reload del código de la app (no hay que reconstruir tras editar).
       - ../../apps/sociallab/src:/app/src
-      # Hot-reload de las libs compartidas (cualquier app las usa).
       - ../../infra/shared:/app/infra/shared
-      # Cache de paquetes Spark (mongo-spark, neo4j-spark) entre reinicios.
+      - spark_ivy:/root/.ivy2
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app-preprolab:
+    build:
+      context: ../..
+      dockerfile: apps/preprolab/Dockerfile
+    container_name: quasar-preprolab
+    hostname: app-preprolab
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env.docker
+    environment:
+      # Específico de PreproLab — sobreescribe defaults del .env.docker.
+      WEB_PORT: "8002"
+      MONGO_DB: preprolab
+    volumes:
+      - ../../infra/data/preprolab:/app/data
+      - ../../apps/preprolab/src:/app/src
+      - ../../infra/shared:/app/infra/shared
       - spark_ivy:/root/.ivy2
     depends_on:
       mongodb:
