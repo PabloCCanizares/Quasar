@@ -12,15 +12,19 @@ build/
 venv/
 env/
 
-# Environment
+# Environment (cada app tiene su .env propio en apps/<app>/.env)
 .env
 .env.cloud
+apps/*/.env
+apps/*/.env.cloud
 
 # Data lake (tracked via .gitkeep, not data files)
-data/raw/*
-data/silver/*
-data/gold/*
-!data/**/.gitkeep
+# Una capa por app: infra/data/<app>/{raw,silver,gold}
+infra/data/*/raw/*
+infra/data/*/silver/*
+infra/data/*/gold/*
+infra/data/*/checkpoints/*
+!infra/data/**/.gitkeep
 
 # Generated artifacts
 outputs/

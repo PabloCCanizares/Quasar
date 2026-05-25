@@ -16,35 +16,16 @@ En Databricks:
 """
 
 import argparse
-import os
 
 from pyspark.sql import SparkSession
 
-from src.config import SPARK_MASTER, RAW_PATH, SILVER_PATH, GOLD_PATH, IS_LOCAL
+from src.config import RAW_PATH, SILVER_PATH, GOLD_PATH
+from infra.shared.spark import build_spark
 
 
 def get_spark(with_connectors: bool = False) -> SparkSession:
-    if IS_LOCAL:
-        java17 = "/opt/homebrew/Cellar/openjdk@17/17.0.17/libexec/openjdk.jdk/Contents/Home"
-        if os.path.exists(java17):
-            os.environ["JAVA_HOME"] = java17
-
-    builder = (
-        SparkSession.builder
-        .master(SPARK_MASTER)
-        .appName("SocialLab Pipeline")
-        .config("spark.sql.legacy.timeParserPolicy", "LEGACY")
-        .config("spark.driver.memory", "2g")
-    )
-
-    if with_connectors:
-        builder = builder.config(
-            "spark.jars.packages",
-            "org.mongodb.spark:mongo-spark-connector_2.12:10.4.0,"
-            "org.neo4j:neo4j-connector-apache-spark_2.12:5.3.1_for_spark_3"
-        )
-
-    return builder.getOrCreate()
+    """Compatibilidad: delega en infra.shared.spark.build_spark."""
+    return build_spark("SocialLab Pipeline", with_connectors=with_connectors)
 
 
 def main():
