@@ -6,9 +6,9 @@
 
 PreproLab implementa todas las técnicas del temario sobre un dataset sintético construido a propósito: una **flota de robots autónomos con mantenimiento predictivo**. El escenario incluye intencionadamente los 10 tipos de problemas que el alumno tiene que resolver: valores perdidos (MCAR/MAR/MNAR), outliers de tres tipos, class noise, duplicados, fechas en formatos múltiples, encoding roto, multivaluadas, redundancia entre atributos, etc.
 
-## Estado actual: Fase 5 (bloque outliers operativo)
+## Estado actual: Fase 6 (bloque integration operativo)
 
-Dataset generado, EDA + missing + outliers funcionales. Los bloques restantes se irán implementando en fases siguientes.
+Dataset generado, EDA + missing + outliers + integration funcionales. Los bloques restantes se irán implementando en fases siguientes.
 
 | Bloque | Técnicas planificadas | Estado |
 |---|---|---|
@@ -16,6 +16,7 @@ Dataset generado, EDA + missing + outliers funcionales. Los bloques restantes se
 | `eda` | Univariable, missing matrix, correlaciones — UI con Plotly | **Fase 3 OK** |
 | `missing` | Drop + simple (mean/median/mode) + KNN + KMeans + comparativa antes/después | **Fase 4 OK** |
 | `outliers` | IQR + Z-score + gestión (remove/cap/log) + noise filters EF/CVCF/IPF | **Fase 5 OK** |
+| `integration` | union + 4 joins + Pearson + Cramér's V + dedup por correlación | **Fase 6 OK** |
 | `integration` | union, 4 tipos de joins, correlaciones para dedup | Fase 6 |
 | `transform` | One-hot, ordinal, multi-flag, discretización (3 métodos), pivot/groupby | Fase 7 |
 | `normalize` | Z-score, Min-Max, Robust, Decimal — comparados sobre mismo modelo | Fase 8 |
@@ -95,6 +96,30 @@ Y para `robots.failure_next_48h` con 10% ruido inyectado a propósito (ground tr
 | **IPF** (agresivo, iterativo hasta convergencia) | 19.58% | 0.593 | 0.302 | 0.400 | 5 |
 
 Coherente con el PDF: recall sube monotónicamente al pasar de conservador → moderado → agresivo, y precision baja por más falsos positivos. El parámetro `inject_noise_pct` permite al alumno validar la calidad del detector con ground truth, no solo creérsela.
+
+### Bloque INTEGRATION (Fase 6) — detalle
+
+Cuatro ejercicios sobre integración de datos y detección de redundancia:
+
+| Ejercicio | Endpoint | Técnica |
+|---|---|---|
+| INTEG-1 | `GET /api/preprolab/integration/union/{a}/{b}?same_schema_only=true\|false` | `pd.concat` con detección de incompatibilidades + modo permisivo |
+| INTEG-2 | `GET /api/preprolab/integration/join/{a}/{b}?on=col&how=inner\|left\|right\|outer` | Los 4 tipos de unión SQL + cardinalidad de keys |
+| INTEG-3 | `GET /api/preprolab/integration/find_redundancy/{tabla}?threshold=T` | Pearson para numéricas + Cramér's V para categóricas |
+| INTEG-4 | `GET /api/preprolab/integration/dedup_by_correlation/{tabla}?threshold=T` | Aplica el drop sugerido por INTEG-3 |
+
+Validación end-to-end:
+
+- **union robots ⊔ events**: schemas incompatibles, `mode=blocked`. Coherente: estas tablas no pueden unirse verticalmente (cero columnas comunes).
+- **join events ⋈ maintenances on robot_id (inner)**: 9.088 ⋈ 3.012 = 13.977 filas. Keys: 1.819 robots en events, 1.679 en maint, 1.527 comunes.
+- **find_redundancy(robots, 0.9)** detecta los 3 pares que el seed inyectó deliberadamente:
+  - voltaje_v ↔ consumo_total_kwh: r = 0.9939
+  - bateria_pct ↔ voltaje_v: r = 0.9925
+  - bateria_pct ↔ consumo_total_kwh: r = 0.9901
+  Y sugiere eliminar `consumo_total_kwh` y `voltaje_v`, conservando `bateria_pct` (la de mayor varianza).
+- **dedup_by_correlation(robots, 0.9)**: 14 → 12 columnas (-14.29%).
+
+Cramér's V se implementa manualmente (sin scipy) calculando el chi² de la tabla de contingencia y normalizando por `sqrt(n · min(c-1, r-1))`. Es la generalización natural de Phi para categóricas r×c.
 
 **Total previsto**: ~30 ejercicios con patrón scaffold/solución.
 

@@ -7,7 +7,7 @@ const BLOCK_INFO = {
     eda:          { label: "EDA",               desc: "Analisis univariable + missing matrix + correlaciones.",   render: renderEDA },
     missing:      { label: "Valores perdidos",  desc: "Diagnostico MCAR/MAR/MNAR + imputacion (media, KNN, K-Means, EM, MICE).", render: renderMissing },
     outliers:     { label: "Outliers + ruido",  desc: "IQR, Z-score, boxplot + noise filters (EF/CVCF/IPF).", render: renderOutliers },
-    integration:  { label: "Integracion",       desc: "union, joins (4 tipos), correlaciones para deduplicar." },
+    integration:  { label: "Integracion",       desc: "union, joins (4 tipos), correlaciones para deduplicar.", render: renderIntegration },
     transform:    { label: "Transformacion",    desc: "One-hot, ordinal, multi-flag, discretizacion, pivot/groupby." },
     normalize:    { label: "Normalizacion",     desc: "Z-score, Min-Max, Robust, Decimal - comparados sobre mismo modelo." },
     reduce_dim:   { label: "Reduccion dim.",    desc: "PCA, t-SNE, AutoEncoders + feature selection." },
@@ -1119,6 +1119,232 @@ async function runNoiseFilter() {
         html += `<p><strong>Precision</strong>: ${m.precision} · <strong>Recall</strong>: ${m.recall} · <strong>F1</strong>: ${m.f1}</p>`;
         html += "</div>";
     }
+    el.innerHTML = html;
+}
+
+// ============================================================
+// Render del bloque INTEGRATION (Fase 6)
+// ============================================================
+
+let INTEG_TABLE_A = "robots";
+let INTEG_TABLE_B = "events";
+
+async function renderIntegration() {
+    const content = document.getElementById("content");
+    content.innerHTML = `
+        <h1>Integración de datos</h1>
+        <p class="muted">Concatenación vertical (union), 4 tipos de join, y detección de redundancia con Pearson + Cramér's V.</p>
+
+        <section class="card">
+            <h2>INTEG-1 · Union <span class="badge" id="badge-union">UNION</span></h2>
+            <div class="row">
+                <label>Tabla A:
+                    <select id="union-table-a">${TABLES.map(t => `<option value="${t}">${t}</option>`).join("")}</select>
+                </label>
+                <label>Tabla B:
+                    <select id="union-table-b">${TABLES.map(t => `<option value="${t}" ${t === "events" ? "selected" : ""}>${t}</option>`).join("")}</select>
+                </label>
+                <label><input type="checkbox" id="union-strict" checked> mismo schema únicamente</label>
+                <button class="tbtn" onclick="runUnion()">Probar</button>
+            </div>
+            <div id="integ-union-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>INTEG-2 · Join <span class="badge" id="badge-join">JOIN</span></h2>
+            <div class="row">
+                <label>Tabla A:
+                    <select id="join-table-a">${TABLES.map(t => `<option value="${t}" ${t === "robots" ? "selected" : ""}>${t}</option>`).join("")}</select>
+                </label>
+                <label>Tabla B:
+                    <select id="join-table-b">${TABLES.map(t => `<option value="${t}" ${t === "events" ? "selected" : ""}>${t}</option>`).join("")}</select>
+                </label>
+                <label>Columna clave: <input type="text" id="join-on" value="id" style="width:120px"></label>
+                <label>Tipo:
+                    <select id="join-how">
+                        <option value="inner">inner</option>
+                        <option value="left">left</option>
+                        <option value="right">right</option>
+                        <option value="outer">outer</option>
+                    </select>
+                </label>
+                <button class="tbtn" onclick="runJoin()">Ejecutar</button>
+            </div>
+            <p class="muted" style="font-size:12px">Ojo: en robots la PK es <code>id</code>; en las otras 3 es <code>robot_id</code>. Para hacer join robots↔events usa la columna apropiada en cada lado (necesitamos misma columna en ambos — renombra si hace falta o usa la API completa con left_on/right_on).</p>
+            <div id="integ-join-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>INTEG-3 · Redundancia (Pearson + Cramér's V) <span class="badge" id="badge-redun">REDUN</span></h2>
+            <div class="row">
+                <label>Tabla:
+                    <select id="redun-table">${TABLES.map(t => `<option value="${t}" ${t === "robots" ? "selected" : ""}>${t}</option>`).join("")}</select>
+                </label>
+                <label>Threshold: <input type="number" id="redun-threshold" value="0.9" step="0.05" min="0.5" max="1" style="width:60px"></label>
+                <button class="tbtn" onclick="runRedundancy()">Analizar</button>
+            </div>
+            <div id="integ-redun-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>INTEG-4 · Dedup por correlación <span class="badge" id="badge-dedup">DEDUP</span></h2>
+            <div class="row">
+                <label>Tabla:
+                    <select id="dedup-table">${TABLES.map(t => `<option value="${t}" ${t === "robots" ? "selected" : ""}>${t}</option>`).join("")}</select>
+                </label>
+                <label>Threshold: <input type="number" id="dedup-threshold" value="0.9" step="0.05" min="0.5" max="1" style="width:60px"></label>
+                <button class="tbtn" onclick="runDedup()">Simular</button>
+            </div>
+            <div id="integ-dedup-content"></div>
+        </section>
+    `;
+}
+
+function _handleIntegScaffold(targetId, badgeId, data, exercise) {
+    const el = document.getElementById(targetId);
+    const badge = document.getElementById(badgeId);
+    badge.classList.add("scaffold");
+    badge.textContent = `${exercise} (scaffold)`;
+    el.innerHTML = `
+        <div class="exercise-placeholder">
+            <p><strong>Ejercicio ${data.exercise} sin resolver.</strong></p>
+            <p class="muted">${data.hint}</p>
+            <p class="muted">Implementa en <code>apps/preprolab/src/web/routes/integration_ex.py</code>.</p>
+        </div>
+    `;
+}
+
+async function runUnion() {
+    const a = document.getElementById("union-table-a").value;
+    const b = document.getElementById("union-table-b").value;
+    const strict = document.getElementById("union-strict").checked;
+    const data = await fetchJSON(`/api/preprolab/integration/union/${a}/${b}?same_schema_only=${strict}`);
+    if (data.error === "scaffold") return _handleIntegScaffold("integ-union-content", "badge-union", data, "INTEG-1");
+    if (data.error) return _showError("integ-union-content", data);
+
+    const badge = document.getElementById("badge-union");
+    badge.classList.remove("scaffold");
+    badge.textContent = "INTEG-1 (resuelto)";
+
+    const el = document.getElementById("integ-union-content");
+    let html = `
+        <table class='kv stats-table'>
+            <tr><th>Schemas coinciden</th><td>${data.schemas_match ? "Sí" : "No"}</td></tr>
+            <tr><th>Filas A / B</th><td>${data.rows_a} / ${data.rows_b}</td></tr>
+            <tr><th>Modo</th><td><strong>${data.mode}</strong></td></tr>
+    `;
+    if ("unioned_rows" in data) {
+        html += `<tr><th>Filas resultantes</th><td><strong>${data.unioned_rows}</strong></td></tr>`;
+    }
+    html += "</table>";
+    if (data.warning) html += `<p class="muted">${data.warning}</p>`;
+    if (data.error_msg) html += `<p class="error">${data.error_msg}</p>`;
+    html += `<p class="muted">Comunes (${data.common_columns.length}): <code>${data.common_columns.join(", ") || "(ninguna)"}</code></p>`;
+    if (data.only_in_a.length) html += `<p class="muted">Solo en A: <code>${data.only_in_a.join(", ")}</code></p>`;
+    if (data.only_in_b.length) html += `<p class="muted">Solo en B: <code>${data.only_in_b.join(", ")}</code></p>`;
+    el.innerHTML = html;
+}
+
+async function runJoin() {
+    const a = document.getElementById("join-table-a").value;
+    const b = document.getElementById("join-table-b").value;
+    const on = document.getElementById("join-on").value;
+    const how = document.getElementById("join-how").value;
+    const data = await fetchJSON(`/api/preprolab/integration/join/${a}/${b}?on=${on}&how=${how}`);
+    if (data.error === "scaffold") return _handleIntegScaffold("integ-join-content", "badge-join", data, "INTEG-2");
+    if (data.error) return _showError("integ-join-content", data);
+
+    const badge = document.getElementById("badge-join");
+    badge.classList.remove("scaffold");
+    badge.textContent = "INTEG-2 (resuelto)";
+
+    const el = document.getElementById("integ-join-content");
+    let html = `
+        <table class='kv stats-table'>
+            <tr><th>Modo / Clave</th><td><strong>${data.how.toUpperCase()}</strong> sobre <code>${data.on}</code></td></tr>
+            <tr><th>Filas A → B → resultantes</th><td>${data.rows_a} → ${data.rows_b} → <strong>${data.rows_joined.toLocaleString()}</strong></td></tr>
+            <tr><th>Keys (A / B / comunes)</th><td>${data.keys_in_a} / ${data.keys_in_b} / ${data.keys_in_common}</td></tr>
+            <tr><th>Keys solo A / solo B</th><td>${data.keys_only_in_a} / ${data.keys_only_in_b}</td></tr>
+        </table>
+        <p class="muted" style="margin-top:10px">Columnas resultantes (${data.columns_after_join.length}): <code>${data.columns_after_join.join(", ")}</code></p>
+    `;
+    if (data.sample && data.sample.length > 0) {
+        html += "<h3 style='margin-top:14px'>Muestra (5 primeras filas)</h3>";
+        const cols = Object.keys(data.sample[0]);
+        html += "<table class='kv'><thead><tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr></thead><tbody>";
+        data.sample.forEach(row => {
+            html += "<tr>" + cols.map(c => `<td class='sample'>${row[c] === null ? "<em>null</em>" : JSON.stringify(row[c])}</td>`).join("") + "</tr>";
+        });
+        html += "</tbody></table>";
+    }
+    el.innerHTML = html;
+}
+
+async function runRedundancy() {
+    const table = document.getElementById("redun-table").value;
+    const th = document.getElementById("redun-threshold").value;
+    const data = await fetchJSON(`/api/preprolab/integration/find_redundancy/${table}?threshold=${th}`);
+    if (data.error === "scaffold") return _handleIntegScaffold("integ-redun-content", "badge-redun", data, "INTEG-3");
+    if (data.error) return _showError("integ-redun-content", data);
+
+    const badge = document.getElementById("badge-redun");
+    badge.classList.remove("scaffold");
+    badge.textContent = "INTEG-3 (resuelto)";
+
+    const el = document.getElementById("integ-redun-content");
+    let html = `
+        <p class="muted">${data.numeric_columns_analyzed.length} columnas numéricas, ${data.categorical_columns_analyzed.length} categóricas analizadas. Threshold = ${data.threshold}.</p>
+    `;
+    if (data.redundant_numeric_pairs.length > 0) {
+        html += "<h3 style='margin-top:14px'>Pares numéricos redundantes (Pearson)</h3>";
+        html += "<table class='kv'><thead><tr><th>Col A</th><th>Col B</th><th>r</th></tr></thead><tbody>";
+        data.redundant_numeric_pairs.forEach(p => {
+            html += `<tr><td><code>${p.col_a}</code></td><td><code>${p.col_b}</code></td><td><strong>${p.corr}</strong></td></tr>`;
+        });
+        html += "</tbody></table>";
+    } else {
+        html += "<p class='muted'>No hay pares numéricos por encima del threshold.</p>";
+    }
+    if (data.redundant_categorical_pairs.length > 0) {
+        html += "<h3 style='margin-top:14px'>Pares categóricos redundantes (Cramér's V)</h3>";
+        html += "<table class='kv'><thead><tr><th>Col A</th><th>Col B</th><th>V</th></tr></thead><tbody>";
+        data.redundant_categorical_pairs.forEach(p => {
+            html += `<tr><td><code>${p.col_a}</code></td><td><code>${p.col_b}</code></td><td><strong>${p.cramers_v}</strong></td></tr>`;
+        });
+        html += "</tbody></table>";
+    }
+    if (data.drop_candidates.length > 0) {
+        html += "<h3 style='margin-top:14px'>Sugerencias de eliminación</h3>";
+        html += "<table class='kv'><thead><tr><th>Eliminar</th><th>Mantener</th><th>Razón</th></tr></thead><tbody>";
+        data.drop_candidates.forEach(s => {
+            html += `<tr><td><code>${s.drop}</code></td><td><code>${s.keep}</code></td><td class='sample'>${s.reason}</td></tr>`;
+        });
+        html += "</tbody></table>";
+    }
+    el.innerHTML = html;
+}
+
+async function runDedup() {
+    const table = document.getElementById("dedup-table").value;
+    const th = document.getElementById("dedup-threshold").value;
+    const data = await fetchJSON(`/api/preprolab/integration/dedup_by_correlation/${table}?threshold=${th}`);
+    if (data.error === "scaffold") return _handleIntegScaffold("integ-dedup-content", "badge-dedup", data, "INTEG-4");
+    if (data.error) return _showError("integ-dedup-content", data);
+
+    const badge = document.getElementById("badge-dedup");
+    badge.classList.remove("scaffold");
+    badge.textContent = "INTEG-4 (resuelto)";
+
+    const el = document.getElementById("integ-dedup-content");
+    let html = `
+        <table class='kv stats-table'>
+            <tr><th>Columnas antes</th><td>${data.columns_before}</td></tr>
+            <tr><th>Columnas después</th><td>${data.columns_after}</td></tr>
+            <tr><th>Eliminadas</th><td><strong>${data.columns_dropped.length}</strong> (${data.reduction_pct}%)</td></tr>
+        </table>
+        <p class="muted" style="margin-top:10px">A eliminar: <code>${data.columns_dropped.join(", ") || "(ninguna)"}</code></p>
+        <p class="muted">Conservadas: <code>${data.columns_kept.join(", ")}</code></p>
+    `;
     el.innerHTML = html;
 }
 
