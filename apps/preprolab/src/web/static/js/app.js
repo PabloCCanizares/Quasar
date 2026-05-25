@@ -6,7 +6,7 @@
 const BLOCK_INFO = {
     eda:          { label: "EDA",               desc: "Analisis univariable + missing matrix + correlaciones.",   render: renderEDA },
     missing:      { label: "Valores perdidos",  desc: "Diagnostico MCAR/MAR/MNAR + imputacion (media, KNN, K-Means, EM, MICE).", render: renderMissing },
-    outliers:     { label: "Outliers + ruido",  desc: "IQR, Z-score, boxplot + noise filters (EF/CVCF/IPF)." },
+    outliers:     { label: "Outliers + ruido",  desc: "IQR, Z-score, boxplot + noise filters (EF/CVCF/IPF).", render: renderOutliers },
     integration:  { label: "Integracion",       desc: "union, joins (4 tipos), correlaciones para deduplicar." },
     transform:    { label: "Transformacion",    desc: "One-hot, ordinal, multi-flag, discretizacion, pivot/groupby." },
     normalize:    { label: "Normalizacion",     desc: "Z-score, Min-Max, Robust, Decimal - comparados sobre mismo modelo." },
@@ -783,6 +783,343 @@ async function runCompare() {
     const cont = document.createElement("div");
     cont.innerHTML = html;
     el.appendChild(cont);
+}
+
+// ============================================================
+// Render del bloque OUTLIERS (Fase 5)
+// ============================================================
+
+let OUTLIERS_TABLE = "robots";
+let OUTLIERS_COLUMN = null;
+let OUTLIERS_NUMERIC_COLS = [];
+
+async function renderOutliers() {
+    const content = document.getElementById("content");
+    content.innerHTML = `
+        <h1>Outliers + class noise</h1>
+        <p class="muted">Detección de outliers numéricos (IQR / Z-score) + gestión (remove/cap/log) + class noise filters del Tema 5 (EF/CVCF/IPF).</p>
+
+        <section class="card">
+            <h2>Tabla y columna numérica</h2>
+            <div class="table-selector" id="outliers-table-selector"></div>
+            <div class="row" style="margin-top:14px">
+                <label>Columna:
+                    <select id="outliers-column"></select>
+                </label>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>OUTLIERS-1 · IQR <span class="badge" id="badge-iqr">IQR</span></h2>
+            <div class="row">
+                <label>Multiplicador: <input type="number" id="iqr-mult" value="1.5" step="0.5" min="0.5" max="5" style="width:60px"></label>
+                <button class="tbtn" onclick="runIQR()">Detectar</button>
+                <span class="muted">1.5 = clásico · 3.0 = solo extremos</span>
+            </div>
+            <div id="outliers-iqr-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>OUTLIERS-2 · Z-score <span class="badge" id="badge-zscore">ZSCORE</span></h2>
+            <div class="row">
+                <label>Threshold: <input type="number" id="z-thresh" value="3.0" step="0.5" min="1" max="5" style="width:60px"></label>
+                <button class="tbtn" onclick="runZscore()">Detectar</button>
+                <span class="muted">|z| > threshold = outlier</span>
+            </div>
+            <div id="outliers-zscore-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>OUTLIERS-3 · Gestión <span class="badge" id="badge-handle">HANDLE</span></h2>
+            <div class="row">
+                <label>Estrategia:
+                    <select id="handle-strategy">
+                        <option value="cap">cap (winsorize)</option>
+                        <option value="remove">remove</option>
+                        <option value="log">log (log1p)</option>
+                    </select>
+                </label>
+                <label>Detección:
+                    <select id="handle-method">
+                        <option value="iqr">IQR</option>
+                        <option value="zscore">Z-score</option>
+                    </select>
+                </label>
+                <button class="tbtn" onclick="runHandle()">Aplicar</button>
+            </div>
+            <div id="outliers-handle-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>OUTLIERS-4 · Class noise filter <span class="badge" id="badge-noise">NOISE</span></h2>
+            <p class="muted">Detecta etiquetas <code>failure_next_48h</code> sospechosamente incorrectas usando ensemble de clasificadores.</p>
+            <div class="row">
+                <label>Método:
+                    <select id="noise-method">
+                        <option value="ef">EF (conservador, 3 clasificadores)</option>
+                        <option value="cvcf">CVCF (moderado, k DT mayoría)</option>
+                        <option value="ipf">IPF (agresivo, iterativo)</option>
+                    </select>
+                </label>
+                <label>k: <input type="number" id="noise-k" value="5" min="3" max="10" style="width:60px"></label>
+                <label>Inyectar ruido %: <input type="number" id="noise-inject" value="0" step="1" min="0" max="30" style="width:60px"></label>
+                <button class="tbtn" onclick="runNoiseFilter()">Ejecutar</button>
+            </div>
+            <p class="muted" style="font-size:12px">Si <code>inject &gt; 0</code>, flippea N% de etiquetas antes del filter para que veas precision/recall del detector.</p>
+            <div id="outliers-noise-content"></div>
+        </section>
+    `;
+
+    renderOutliersTableSelector();
+    await loadNumericColumns(OUTLIERS_TABLE);
+}
+
+function renderOutliersTableSelector() {
+    const sel = document.getElementById("outliers-table-selector");
+    sel.innerHTML = "";
+    TABLES.forEach(t => {
+        const btn = document.createElement("button");
+        btn.textContent = t;
+        btn.className = (t === OUTLIERS_TABLE) ? "tbtn active" : "tbtn";
+        btn.addEventListener("click", () => {
+            OUTLIERS_TABLE = t;
+            renderOutliersTableSelector();
+            loadNumericColumns(t);
+        });
+        sel.appendChild(btn);
+    });
+}
+
+async function loadNumericColumns(table) {
+    const data = await fetchJSON(`/api/preprolab/eda/schema/${table}`);
+    const sel = document.getElementById("outliers-column");
+    sel.innerHTML = "";
+    if (data.error || !data.columns) {
+        sel.innerHTML = "<option disabled>(error cargando)</option>";
+        return;
+    }
+    const numericCols = data.columns.filter(c => c.type === "numeric");
+    OUTLIERS_NUMERIC_COLS = numericCols.map(c => c.name);
+    numericCols.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.name;
+        opt.textContent = `${c.name} (${c.dtype})`;
+        sel.appendChild(opt);
+    });
+    sel.onchange = () => { OUTLIERS_COLUMN = sel.value; };
+    if (numericCols.length > 0) {
+        OUTLIERS_COLUMN = numericCols[0].name;
+        sel.value = OUTLIERS_COLUMN;
+    }
+}
+
+function _handleOutliersScaffold(targetId, badgeId, data, exercise) {
+    const el = document.getElementById(targetId);
+    const badge = document.getElementById(badgeId);
+    badge.classList.add("scaffold");
+    badge.textContent = `${exercise} (scaffold)`;
+    el.innerHTML = `
+        <div class="exercise-placeholder">
+            <p><strong>Ejercicio ${data.exercise} sin resolver.</strong></p>
+            <p class="muted">${data.hint}</p>
+            <p class="muted">Implementa en <code>apps/preprolab/src/web/routes/outliers_ex.py</code>.</p>
+        </div>
+    `;
+}
+
+async function runIQR() {
+    if (!OUTLIERS_COLUMN) return;
+    const mult = document.getElementById("iqr-mult").value;
+    const data = await fetchJSON(`/api/preprolab/outliers/detect_iqr/${OUTLIERS_TABLE}/${OUTLIERS_COLUMN}?multiplier=${mult}`);
+    if (data.error === "scaffold") return _handleOutliersScaffold("outliers-iqr-content", "badge-iqr", data, "OUTLIERS-1");
+    if (data.error) return _showError("outliers-iqr-content", data);
+
+    const badge = document.getElementById("badge-iqr");
+    badge.classList.remove("scaffold");
+    badge.textContent = "OUTLIERS-1 (resuelto)";
+
+    const el = document.getElementById("outliers-iqr-content");
+    let html = `
+        <table class='kv stats-table'>
+            <tr><th>bounds</th><td>[${data.bounds.lower.toFixed(3)}, ${data.bounds.upper.toFixed(3)}]</td></tr>
+            <tr><th>Q1 / Q3 / IQR</th><td>${data.stats.q1.toFixed(3)} / ${data.stats.q3.toFixed(3)} / ${data.stats.iqr.toFixed(3)}</td></tr>
+            <tr><th>outliers</th><td><strong>${data.outlier_count.toLocaleString()}</strong> (${data.outlier_pct}%)</td></tr>
+        </table>
+    `;
+    if (data.outlier_samples.length > 0) {
+        html += "<h3 style='margin-top:14px'>Muestras (primeras 10)</h3>";
+        html += "<table class='kv'><thead><tr><th>row_id</th><th>valor</th></tr></thead><tbody>";
+        data.outlier_samples.forEach(s => {
+            html += `<tr><td>${s.row_id}</td><td>${s.value}</td></tr>`;
+        });
+        html += "</tbody></table>";
+    }
+    el.innerHTML = html;
+
+    // Boxplot visual
+    if (data.boxplot_data) {
+        const div = document.createElement("div");
+        div.style.height = "200px";
+        el.appendChild(div);
+        const b = data.boxplot_data;
+        Plotly.newPlot(div, [{
+            type: "box",
+            x: [b.q1, b.median, b.q3],
+            q1: [b.q1], median: [b.median], q3: [b.q3],
+            lowerfence: [b.lower_whisker], upperfence: [b.upper_whisker],
+            mean: [b.median],
+            orientation: "h",
+            name: OUTLIERS_COLUMN,
+            marker: { color: "#1d9bf0" },
+        }], {
+            paper_bgcolor: "#16191c", plot_bgcolor: "#16191c",
+            font: { color: "#d7dadc" },
+            xaxis: { title: OUTLIERS_COLUMN },
+            margin: { l: 80, r: 20, t: 20, b: 50 },
+        }, { displayModeBar: false });
+    }
+}
+
+async function runZscore() {
+    if (!OUTLIERS_COLUMN) return;
+    const t = document.getElementById("z-thresh").value;
+    const data = await fetchJSON(`/api/preprolab/outliers/detect_zscore/${OUTLIERS_TABLE}/${OUTLIERS_COLUMN}?threshold=${t}`);
+    if (data.error === "scaffold") return _handleOutliersScaffold("outliers-zscore-content", "badge-zscore", data, "OUTLIERS-2");
+    if (data.error) return _showError("outliers-zscore-content", data);
+
+    const badge = document.getElementById("badge-zscore");
+    badge.classList.remove("scaffold");
+    badge.textContent = "OUTLIERS-2 (resuelto)";
+
+    const el = document.getElementById("outliers-zscore-content");
+    if (data.warning) { el.innerHTML = `<p class="muted">${data.warning}</p>`; return; }
+    let html = `
+        <table class='kv stats-table'>
+            <tr><th>mean / std</th><td>${data.stats.mean.toFixed(3)} / ${data.stats.std.toFixed(3)}</td></tr>
+            <tr><th>threshold</th><td>${data.threshold}</td></tr>
+            <tr><th>outliers</th><td><strong>${data.outlier_count.toLocaleString()}</strong> (${data.outlier_pct}%)</td></tr>
+        </table>
+    `;
+    if (data.outlier_samples.length > 0) {
+        html += "<h3 style='margin-top:14px'>Muestras (con z-score)</h3>";
+        html += "<table class='kv'><thead><tr><th>row_id</th><th>valor</th><th>z</th></tr></thead><tbody>";
+        data.outlier_samples.forEach(s => {
+            html += `<tr><td>${s.row_id}</td><td>${s.value}</td><td>${s.z_score}</td></tr>`;
+        });
+        html += "</tbody></table>";
+    }
+    el.innerHTML = html;
+}
+
+async function runHandle() {
+    if (!OUTLIERS_COLUMN) return;
+    const strategy = document.getElementById("handle-strategy").value;
+    const method = document.getElementById("handle-method").value;
+    const url = `/api/preprolab/outliers/handle/${OUTLIERS_TABLE}/${OUTLIERS_COLUMN}?strategy=${strategy}&method=${method}`;
+    const data = await fetchJSON(url);
+    if (data.error === "scaffold") return _handleOutliersScaffold("outliers-handle-content", "badge-handle", data, "OUTLIERS-3");
+    if (data.error) return _showError("outliers-handle-content", data);
+
+    const badge = document.getElementById("badge-handle");
+    badge.classList.remove("scaffold");
+    badge.textContent = "OUTLIERS-3 (resuelto)";
+
+    const el = document.getElementById("outliers-handle-content");
+    el.innerHTML = "";
+    const sb = data.stats_before, sa = data.stats_after;
+    const html = `
+        <table class='kv'>
+            <thead><tr><th></th><th>mean</th><th>std</th><th>min</th><th>max</th><th>filas</th></tr></thead>
+            <tbody>
+                <tr><th>Antes</th><td>${sb.mean.toFixed(3)}</td><td>${sb.std.toFixed(3)}</td><td>${sb.min.toFixed(2)}</td><td>${sb.max.toFixed(2)}</td><td>${data.rows_before}</td></tr>
+                <tr><th>Después (${strategy})</th><td>${sa.mean.toFixed(3)}</td><td>${sa.std.toFixed(3)}</td><td>${sa.min.toFixed(2)}</td><td>${sa.max.toFixed(2)}</td><td>${data.rows_after}</td></tr>
+            </tbody>
+        </table>
+    `;
+    const tbl = document.createElement("div");
+    tbl.innerHTML = html;
+    el.appendChild(tbl);
+    const info = document.createElement("p");
+    info.className = "muted";
+    info.innerHTML = `bounds: [${data.bounds.lower.toFixed(3)}, ${data.bounds.upper.toFixed(3)}] · outliers detectados: ${data.outlier_count_before}`;
+    el.appendChild(info);
+
+    // Histograma antes vs después
+    if (data.histogram_before && data.histogram_after) {
+        const div = document.createElement("div");
+        div.style.height = "300px";
+        el.appendChild(div);
+        const eb = data.histogram_before.bin_edges;
+        const ea = data.histogram_after.bin_edges;
+        Plotly.newPlot(div, [
+            { x: eb.slice(0, -1).map((e, i) => (e + eb[i + 1]) / 2),
+              y: data.histogram_before.counts, type: "bar", name: "Antes",
+              marker: { color: "#71767b" }, opacity: 0.6 },
+            { x: ea.slice(0, -1).map((e, i) => (e + ea[i + 1]) / 2),
+              y: data.histogram_after.counts, type: "bar", name: `Después (${strategy})`,
+              marker: { color: "#1d9bf0" }, opacity: 0.8 },
+        ], {
+            paper_bgcolor: "#16191c", plot_bgcolor: "#16191c",
+            font: { color: "#d7dadc" },
+            barmode: "overlay",
+            xaxis: { title: OUTLIERS_COLUMN }, yaxis: { title: "Frecuencia" },
+            margin: { l: 50, r: 20, t: 20, b: 60 },
+        }, { displayModeBar: false });
+    }
+}
+
+async function runNoiseFilter() {
+    const method = document.getElementById("noise-method").value;
+    const k = document.getElementById("noise-k").value;
+    const inject = document.getElementById("noise-inject").value;
+    const inject_pct = parseFloat(inject) / 100.0;
+    const el = document.getElementById("outliers-noise-content");
+    el.innerHTML = "<span class='loading'>ejecutando k-fold CV...</span>";
+
+    const url = `/api/preprolab/outliers/noise_filter/${OUTLIERS_TABLE}?method=${method}&k=${k}&inject_noise_pct=${inject_pct}`;
+    const data = await fetchJSON(url);
+    if (data.error === "scaffold") return _handleOutliersScaffold("outliers-noise-content", "badge-noise", data, "OUTLIERS-4");
+    if (data.error) return _showError("outliers-noise-content", data);
+
+    const badge = document.getElementById("badge-noise");
+    badge.classList.remove("scaffold");
+    badge.textContent = "OUTLIERS-4 (resuelto)";
+
+    el.innerHTML = "";
+    let html = `
+        <table class='kv stats-table'>
+            <tr><th>Método</th><td>${data.method.toUpperCase()}${data.iterations > 1 ? ` (${data.iterations} iteraciones)` : ""}</td></tr>
+            <tr><th>n_samples</th><td>${data.n_samples.toLocaleString()} (con ${data.n_features} features numéricas)</td></tr>
+            <tr><th>Detectados como ruido</th><td><strong>${data.noisy_count.toLocaleString()}</strong> (${data.noisy_pct}%)</td></tr>
+        </table>
+    `;
+
+    if (data.per_classifier_failures) {
+        html += "<h3 style='margin-top:14px'>Errores por clasificador</h3>";
+        html += "<table class='kv'><tbody>";
+        Object.entries(data.per_classifier_failures).forEach(([clf, n]) => {
+            html += `<tr><th>${clf}</th><td>${n}</td></tr>`;
+        });
+        html += "</tbody></table>";
+    }
+
+    html += "<h3 style='margin-top:14px'>Distribución por clase</h3>";
+    html += "<table class='kv'><thead><tr><th>Clase</th><th>Total</th><th>Ruidosas</th><th>%</th></tr></thead><tbody>";
+    Object.entries(data.by_class).forEach(([cls, info]) => {
+        html += `<tr><td><code>${cls}</code></td><td>${info.total.toLocaleString()}</td><td>${info.noisy.toLocaleString()}</td><td>${info.pct}%</td></tr>`;
+    });
+    html += "</tbody></table>";
+
+    if (data.validation_metrics) {
+        const m = data.validation_metrics;
+        html += "<h3 style='margin-top:14px'>Validación contra ground truth</h3>";
+        html += "<div class='hints'>";
+        html += `<p><strong>Inyectadas</strong>: ${m.injected} · <strong>Detectadas</strong>: ${m.detected}</p>`;
+        html += `<p>TP: ${m.true_positives} · FP: ${m.false_positives} · FN: ${m.false_negatives}</p>`;
+        html += `<p><strong>Precision</strong>: ${m.precision} · <strong>Recall</strong>: ${m.recall} · <strong>F1</strong>: ${m.f1}</p>`;
+        html += "</div>";
+    }
+    el.innerHTML = html;
 }
 
 // ============================================================
