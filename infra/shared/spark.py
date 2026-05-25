@@ -34,13 +34,20 @@ def _ensure_java_home() -> None:
             return
 
 
-def build_spark(app_name: str, with_connectors: bool = False, driver_memory: str = "2g") -> SparkSession:
+def build_spark(
+    app_name: str,
+    with_connectors: bool = False,
+    driver_memory: str = "2g",
+    extra_configs: dict[str, str] | None = None,
+) -> SparkSession:
     """Construye y devuelve una SparkSession.
 
     Args:
         app_name: nombre que aparece en la UI de Spark.
         with_connectors: si True, añade los paquetes Maven para Mongo y Neo4j.
         driver_memory: memoria del driver (default 2g).
+        extra_configs: dict de configs adicionales para el SparkSession.builder.
+            Útil para connector-specific settings (p.ej. spark.mongodb.write.connection.uri).
     """
     if IS_LOCAL:
         _ensure_java_home()
@@ -59,5 +66,9 @@ def build_spark(app_name: str, with_connectors: bool = False, driver_memory: str
             "org.mongodb.spark:mongo-spark-connector_2.12:10.4.0,"
             "org.neo4j:neo4j-connector-apache-spark_2.12:5.3.1_for_spark_3",
         )
+
+    if extra_configs:
+        for k, v in extra_configs.items():
+            builder = builder.config(k, v)
 
     return builder.getOrCreate()

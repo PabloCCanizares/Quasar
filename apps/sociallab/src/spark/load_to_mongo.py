@@ -7,28 +7,21 @@ Uso:
     python -m src.spark.load_to_mongo
 """
 
-import os
-
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql import functions as F
 
-from src.config import SPARK_MASTER, SILVER_PATH, GOLD_PATH, MONGO_URI, MONGO_DB, IS_LOCAL
+from src.config import SILVER_PATH, GOLD_PATH, MONGO_URI, MONGO_DB
+from infra.shared.spark import build_spark
 
 
 def get_spark_mongo() -> SparkSession:
-    if IS_LOCAL:
-        java17 = "/opt/homebrew/Cellar/openjdk@17/17.0.17/libexec/openjdk.jdk/Contents/Home"
-        if os.path.exists(java17):
-            os.environ["JAVA_HOME"] = java17
-
-    return (
-        SparkSession.builder
-        .master(SPARK_MASTER)
-        .appName("SocialLab Load to MongoDB")
-        .config("spark.jars.packages", "org.mongodb.spark:mongo-spark-connector_2.12:10.4.0")
-        .config("spark.mongodb.write.connection.uri", MONGO_URI)
-        .config("spark.mongodb.write.database", MONGO_DB)
-        .getOrCreate()
+    return build_spark(
+        "SocialLab Load to MongoDB",
+        extra_configs={
+            "spark.jars.packages": "org.mongodb.spark:mongo-spark-connector_2.12:10.4.0",
+            "spark.mongodb.write.connection.uri": MONGO_URI,
+            "spark.mongodb.write.database": MONGO_DB,
+        },
     )
 
 

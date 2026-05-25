@@ -8,33 +8,26 @@ Uso:
     python -m src.spark.load_to_neo4j
 """
 
-import os
-
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
 from src.config import (
-    SPARK_MASTER, SILVER_PATH, GOLD_PATH,
+    SILVER_PATH, GOLD_PATH,
     MONGO_URI, MONGO_DB,
     NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD,
-    IS_LOCAL,
 )
+from infra.shared.spark import build_spark
 
 
 def get_spark_neo4j() -> SparkSession:
-    if IS_LOCAL:
-        java17 = "/opt/homebrew/Cellar/openjdk@17/17.0.17/libexec/openjdk.jdk/Contents/Home"
-        if os.path.exists(java17):
-            os.environ["JAVA_HOME"] = java17
-
-    return (
-        SparkSession.builder
-        .master(SPARK_MASTER)
-        .appName("SocialLab Load to Neo4j")
-        .config("spark.jars.packages",
+    return build_spark(
+        "SocialLab Load to Neo4j",
+        extra_configs={
+            "spark.jars.packages": (
                 "org.neo4j:neo4j-connector-apache-spark_2.12:5.3.1_for_spark_3,"
-                "org.mongodb.spark:mongo-spark-connector_2.12:10.4.0")
-        .getOrCreate()
+                "org.mongodb.spark:mongo-spark-connector_2.12:10.4.0"
+            ),
+        },
     )
 
 
