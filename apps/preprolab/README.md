@@ -6,15 +6,15 @@
 
 PreproLab implementa todas las técnicas del temario sobre un dataset sintético construido a propósito: una **flota de robots autónomos con mantenimiento predictivo**. El escenario incluye intencionadamente los 10 tipos de problemas que el alumno tiene que resolver: valores perdidos (MCAR/MAR/MNAR), outliers de tres tipos, class noise, duplicados, fechas en formatos múltiples, encoding roto, multivaluadas, redundancia entre atributos, etc.
 
-## Estado actual: Fase 3 (bloque EDA operativo)
+## Estado actual: Fase 4 (bloque missing operativo)
 
-Dataset generado y primer bloque (EDA) completamente funcional con UI Plotly. Los bloques restantes se irán implementando en fases siguientes.
+Dataset generado, EDA y missing funcionales. Los bloques restantes se irán implementando en fases siguientes.
 
 | Bloque | Técnicas planificadas | Estado |
 |---|---|---|
 | **Seed** | Generador de la flota de robots (4 tablas, 14 problemas inyectados) | **Fase 2 OK** |
 | `eda` | Univariable, missing matrix, correlaciones — UI con Plotly | **Fase 3 OK** |
-| `missing` | Diagnóstico MCAR/MAR/MNAR + Imputer (media/mediana), KNNI, KMI, MICE | Fase 4 |
+| `missing` | Drop + simple (mean/median/mode) + KNN + KMeans + comparativa antes/después | **Fase 4 OK** |
 | `outliers` | IQR, Z-score, boxplot + EF/CVCF/IPF noise filters | Fase 5 |
 | `integration` | union, 4 tipos de joins, correlaciones para dedup | Fase 6 |
 | `transform` | One-hot, ordinal, multi-flag, discretización (3 métodos), pivot/groupby | Fase 7 |
@@ -36,6 +36,38 @@ Tres ejercicios scaffold/solución, todos sobre las 4 tablas del seed:
 Endpoints no-gateados (siempre disponibles): `overview` y `schema/{tabla}`.
 
 Frontend: tab EDA con selector de tabla, histogramas (Plotly bars), missing matrix visual, heatmap de correlaciones interactivo.
+
+### Bloque MISSING (Fase 4) — detalle
+
+Cinco ejercicios sobre las 4 estrategias del Tema 5 + comparativa final:
+
+| Ejercicio | Endpoint | Técnica |
+|---|---|---|
+| MISSING-1 | `GET /api/preprolab/missing/dropna/{tabla}?mode=any\|all\|thresh` | `.dropna()` con varias estrategias |
+| MISSING-2 | `GET /api/preprolab/missing/impute_simple/{tabla}/{columna}?strategy=mean\|median\|mode` | Imputer pyspark-style (constante por columna) |
+| MISSING-3 | `GET /api/preprolab/missing/impute_knn/{tabla}/{columna}?k=N` | KNN Imputation (sklearn KNNImputer + StandardScaler) |
+| MISSING-4 | `GET /api/preprolab/missing/impute_kmeans/{tabla}/{columna}?k=N` | K-Means Imputation: imputación temporal con mediana → KMeans → reemplazar nulls con centroide |
+| MISSING-5 | `GET /api/preprolab/missing/compare/{tabla}/{columna}` | Aplica los 5 métodos a una columna y compara distribuciones + variance loss |
+
+Endpoint no-gateado (siempre disponible): `columns_with_nulls/{tabla}`.
+
+Frontend: tab "Valores perdidos" con 5 secciones colapsables, una por técnica. Cada sección tiene controles propios (modo dropna, estrategia simple, k para KNN/KMeans) y muestra:
+- Estadísticas antes/después de la imputación (mean, median, std, min/max, % null).
+- Histogramas superpuestos (gris = antes, azul = después).
+- Para KMeans: distribución por cluster con tamaño + imputados + valor del centroide.
+- Para compare: 5 histogramas superpuestos + tabla de variance loss por método.
+
+Validación verificada sobre `robots.battery_health_v2` (27.91% null por MAR del firmware viejo):
+
+| Método | std resultante | variance loss vs drop |
+|---|---|---|
+| drop (referencia) | 0.1702 | 0 (ref) |
+| mean | 0.1445 | -15.1% |
+| median | 0.1445 | -15.1% |
+| **KNN k=5** | **0.1509** | **-11.3%** (mejor) |
+| KMeans k=5 | 0.1448 | -14.9% |
+
+El alumno ve numérica y visualmente por qué KNN/KMeans son mejores que mean/median: capturan correlaciones con otras features (especialmente firmware_version, que es la causa real del MAR).
 
 **Total previsto**: ~30 ejercicios con patrón scaffold/solución.
 
