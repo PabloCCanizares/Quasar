@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 # ==========================================================
-# SocialLab — laboratorio en Docker
+# Quasar — orquestador del ecosistema (Big Data + IA).
 #
-# Permite arrancar el ecosistema completo y "destapar" bloques
-# de ejercicios (Cypher de Neo4j y modelos ML) sin tocar codigo.
+# Apps del ecosistema:
+#   sociallab    Red social poliglota (Twitter + MongoDB + Neo4j + Spark ML)
+#   preprolab    Preprocesamiento clasico del Tema 5 — proximamente
+#   llmprep      Limpieza de corpus + nanoGPT — proximamente
 #
-# Uso: ./lab.sh <comando> [args]
+# Sintaxis general:
+#   ./lab.sh <app> <comando> [args]
+#
+# Ejemplos:
+#   ./lab.sh sociallab up exercises
+#   ./lab.sh sociallab seed
+#   ./lab.sh sociallab etl
+#   ./lab.sh sociallab unlock neo4j basic
+#   ./lab.sh help
 # ==========================================================
 
 set -e
@@ -13,7 +23,11 @@ set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
-ENV_FILE=".env.docker"
+COMPOSE_DIR="$DIR/infra/compose"
+COMPOSE_FILE="$COMPOSE_DIR/docker-compose.yml"
+COMPOSE_CLOUD_FILE="$COMPOSE_DIR/docker-compose.cloud.yml"
+ENV_FILE="$COMPOSE_DIR/.env.docker"
+
 COMPOSE=()
 
 GREEN='\033[0;32m'
@@ -22,7 +36,7 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-log()  { echo -e "${BLUE}[lab]${NC} $1"; }
+log()  { echo -e "${BLUE}[quasar]${NC} $1"; }
 ok()   { echo -e "${GREEN}[OK]${NC}  $1"; }
 warn() { echo -e "${YELLOW}[!]${NC}  $1"; }
 err()  { echo -e "${RED}[ERR]${NC} $1" >&2; }
@@ -45,12 +59,20 @@ ensure_docker() {
     fi
 }
 
+# Atajo: ejecuta docker compose con el archivo y env_file correctos.
+compose() {
+    "${COMPOSE[@]}" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
+}
+
+compose_cloud() {
+    "${COMPOSE[@]}" -f "$COMPOSE_CLOUD_FILE" "$@"
+}
+
 # ----------------------------------------------------------
 # Edicion del flag en .env.docker
 #   var    : LAB_NEO4J | LAB_ML
 #   action : unlock | lock | all | none
 #   block  : basic | intermediate | advanced | supervised | ...
-# Devuelve por stdout el nuevo valor.
 # ----------------------------------------------------------
 update_flag() {
     local var="$1" action="$2" block="$3"
@@ -99,289 +121,343 @@ print(new_value if new_value else "(empty)")
 PYEOF
 }
 
-restart_app() {
-    log "Recreando el contenedor 'app' para recoger nuevos flags..."
-    "${COMPOSE[@]}" up -d app
+# ==========================================================
+# SocialLab
+# ==========================================================
+
+SOCIALLAB_SERVICE="app-sociallab"
+SOCIALLAB_DATA="$DIR/infra/data/sociallab"
+
+sociallab_restart_app() {
+    log "Recreando el contenedor '$SOCIALLAB_SERVICE' para recoger nuevos flags..."
+    compose up -d "$SOCIALLAB_SERVICE"
     ok "Listo. Recarga el navegador."
 }
 
-train_ml_artifacts() {
-    clear_ml_artifacts
-    log "Entrenando modelos ML segun LAB_ML actual..."
-    "${COMPOSE[@]}" exec app python -m src.spark.models.run_all
-    ok "Modelos ML actualizados. Recarga la vista Spark/ML."
-}
-
-clear_ml_artifacts() {
-    if [[ -d data/gold/models ]]; then
-        log "Limpiando modelos ML generados previamente (data/gold/models)..."
-        rm -rf data/gold/models
+sociallab_clear_ml_artifacts() {
+    if [[ -d "$SOCIALLAB_DATA/gold/models" ]]; then
+        log "Limpiando modelos ML generados previamente (infra/data/sociallab/gold/models)..."
+        rm -rf "$SOCIALLAB_DATA/gold/models"
     fi
 }
 
-ensure_raw_data() {
+sociallab_train_ml_artifacts() {
+    sociallab_clear_ml_artifacts
+    log "Entrenando modelos ML segun LAB_ML actual..."
+    compose exec "$SOCIALLAB_SERVICE" python -m src.spark.models.run_all
+    ok "Modelos ML actualizados. Recarga la vista Spark/ML."
+}
+
+sociallab_ensure_raw_data() {
     local missing=0
     for file in users posts likes follows; do
-        if [[ ! -s "data/raw/${file}.json" ]]; then
+        if [[ ! -s "$SOCIALLAB_DATA/raw/${file}.json" ]]; then
             missing=1
         fi
     done
 
     if [[ "$missing" -eq 1 ]]; then
-        warn "No encuentro data/raw/{users,posts,likes,follows}.json."
+        warn "No encuentro infra/data/sociallab/raw/{users,posts,likes,follows}.json."
         log "Generando datos raw automaticamente antes del ETL..."
-        "${COMPOSE[@]}" exec app python -m src.seed.generate_dirty_data
+        compose exec "$SOCIALLAB_SERVICE" python -m src.seed.generate_dirty_data
     fi
 }
 
-cmd="${1:-help}"
+sociallab_usage() {
+    cat <<EOF
+SocialLab — comandos disponibles
 
-case "$cmd" in
-
-    # --------------------------------------------------------
-    # Ciclo de vida
-    # --------------------------------------------------------
-    up)
-        ensure_docker
-        mode="${2:-}"
-        if [[ -n "$mode" ]]; then
-            case "$mode" in
-                exercises)
-                    update_flag LAB_NEO4J none "" > /dev/null
-                    update_flag LAB_ML none "" > /dev/null
-                    log "Modo: ejercicios (todos los algoritmos como scaffold)"
-                    ;;
-                solutions|all)
-                    update_flag LAB_NEO4J all "" > /dev/null
-                    update_flag LAB_ML all "" > /dev/null
-                    log "Modo: soluciones (todos los algoritmos resueltos)"
-                    ;;
-                *)
-                    err "Modo desconocido: $mode"
-                    echo "  Modos validos: exercises | solutions"
-                    exit 1
-                    ;;
-            esac
-        else
-            log "Arrancando con la configuracion actual de $ENV_FILE"
-        fi
-        "${COMPOSE[@]}" up -d --build
-        ok "Web:  http://localhost:8000"
-        ok "Neo4j browser: http://localhost:7474  (neo4j / neo4jneo4j)"
-        ;;
-
-    down)
-        ensure_docker
-        log "Parando contenedores (volumenes preservados)..."
-        "${COMPOSE[@]}" down
-        ;;
-
-    cloud)
-        if [[ ! -f .env.cloud ]]; then
-            err "Falta .env.cloud. Copia la plantilla y rellena las URIs:"
-            echo "  cp .env.cloud.example .env.cloud"
-            echo "  # rellena MONGO_URI, NEO4J_URI, NEO4J_PASSWORD con tus credenciales"
-            echo
-            echo "Guia paso a paso: docs/MIGRACION_CLOUD.md"
-            echo
-            echo "Alternativa sin Docker (alumno muy ligero):"
-            echo "  cp .env.cloud .env && python main.py   # usa el venv local"
-            exit 1
-        fi
-        ensure_docker
-        # Si el modo local esta corriendo, los puertos chocan (8000)
-        if "${COMPOSE[@]}" ps --status running --quiet 2>/dev/null | grep -q .; then
-            log "Modo local detectado — parandolo primero (mongo/neo4j locales se quedan)..."
-            "${COMPOSE[@]}" stop
-        fi
-        log "Arrancando solo el contenedor 'app' apuntando a Atlas/Aura..."
-        "${COMPOSE[@]}" -f docker-compose.cloud.yml up -d --build
-        ok "Web: http://localhost:8000"
-        ok "Mongo y Neo4j viven en cloud — no hay contenedores locales para esas BBDD"
-        ;;
-
-    cloud-down)
-        ensure_docker
-        log "Parando contenedor cloud..."
-        "${COMPOSE[@]}" -f docker-compose.cloud.yml down
-        ;;
-
-    reset)
-        ensure_docker
-        warn "Esto borrara TODOS los datos:"
-        warn "  - volumenes Docker (mongo_data, neo4j_data, neo4j_logs, spark_ivy)"
-        warn "  - contenido de data/{raw,silver,gold}/"
-        read -r -p "Escribe 'yes' para continuar: " ans
-        if [[ "$ans" != "yes" ]]; then
-            log "Cancelado"
-            exit 0
-        fi
-        "${COMPOSE[@]}" down -v
-        rm -rf data/raw/*.json data/silver/* data/gold/* 2>/dev/null || true
-        ok "Estado limpio. Arranca con: ./lab.sh up"
-        ;;
-
-    # --------------------------------------------------------
-    # Modo laboratorio
-    # --------------------------------------------------------
-    unlock)
-        kind="${2:-}"; block="${3:-}"
-        if [[ -z "$kind" || -z "$block" ]]; then
-            err "Uso: ./lab.sh unlock {neo4j|ml} <bloque>"
-            echo "  neo4j: basic | intermediate | advanced"
-            echo "  ml:    supervised | unsupervised | graph_ml"
-            exit 1
-        fi
-        case "$kind" in
-            neo4j) new=$(update_flag LAB_NEO4J unlock "$block"); ok "LAB_NEO4J = $new" ;;
-            ml)    new=$(update_flag LAB_ML    unlock "$block"); ok "LAB_ML    = $new" ;;
-            *)     err "kind debe ser 'neo4j' o 'ml'"; exit 1 ;;
-        esac
-        ensure_docker
-        restart_app
-        if [[ "$kind" == "ml" ]]; then
-            train_ml_artifacts
-        fi
-        ;;
-
-    lock)
-        kind="${2:-}"; block="${3:-}"
-        if [[ -z "$kind" || -z "$block" ]]; then
-            err "Uso: ./lab.sh lock {neo4j|ml} <bloque>"
-            exit 1
-        fi
-        case "$kind" in
-            neo4j) new=$(update_flag LAB_NEO4J lock "$block"); ok "LAB_NEO4J = $new" ;;
-            ml)    new=$(update_flag LAB_ML    lock "$block"); ok "LAB_ML    = $new"; clear_ml_artifacts ;;
-            *)     err "kind debe ser 'neo4j' o 'ml'"; exit 1 ;;
-        esac
-        ensure_docker
-        restart_app
-        ;;
-
-    solutions)
-        update_flag LAB_NEO4J all "" > /dev/null
-        update_flag LAB_ML all "" > /dev/null
-        ok "Todo desbloqueado: LAB_NEO4J=all, LAB_ML=all"
-        ensure_docker
-        restart_app
-        train_ml_artifacts
-        ;;
-
-    exercises)
-        update_flag LAB_NEO4J none "" > /dev/null
-        update_flag LAB_ML none "" > /dev/null
-        clear_ml_artifacts
-        ok "Todo en modo ejercicio (scaffold)"
-        ensure_docker
-        restart_app
-        ;;
-
-    status)
-        echo
-        log "Estado de los flags ($ENV_FILE):"
-        grep -E '^LAB_NEO4J=|^LAB_ML=' "$ENV_FILE" | sed 's/^/    /'
-        echo
-        if command -v docker > /dev/null 2>&1; then
-            log "Servicios Docker:"
-            ensure_docker
-            "${COMPOSE[@]}" ps 2>/dev/null | sed 's/^/    /' || warn "Compose no esta corriendo"
-        fi
-        echo
-        ;;
-
-    # --------------------------------------------------------
-    # Pipeline de datos (dentro del contenedor app)
-    # --------------------------------------------------------
-    seed)
-        ensure_docker
-        clear_ml_artifacts
-        log "Generando datos sucios en data/raw/..."
-        "${COMPOSE[@]}" exec app python -m src.seed.generate_dirty_data
-        ;;
-
-    etl)
-        ensure_docker
-        clear_ml_artifacts
-        ensure_raw_data
-        log "Ejecutando Spark ETL completo (raw -> silver -> gold + carga Mongo/Neo4j)..."
-        "${COMPOSE[@]}" exec app python -m src.spark.run_pipeline --all
-        ;;
-
-    train)
-        ensure_docker
-        train_ml_artifacts
-        ;;
-
-    logs)
-        ensure_docker
-        svc="${2:-}"
-        if [[ -n "$svc" ]]; then
-            "${COMPOSE[@]}" logs -f "$svc"
-        else
-            "${COMPOSE[@]}" logs -f
-        fi
-        ;;
-
-    # --------------------------------------------------------
-    # Ayuda
-    # --------------------------------------------------------
-    help|--help|-h|*)
-        cat <<'USAGE'
-SocialLab — laboratorio en Docker
-
-Uso: ./lab.sh <comando> [args]
-
-Ciclo de vida (modo local — todo en Docker):
-    up [exercises|solutions]    Arranca el ecosistema completo (mongo+neo4j+app).
-                                Sin argumento usa lo que haya en .env.docker.
+Ciclo de vida (modo Docker local):
+    up [exercises|solutions]    Arranca mongo + neo4j + app-sociallab.
     down                         Para los contenedores. Datos preservados.
+    status                       Muestra los flags actuales y el estado.
     reset                        Borra volumenes y data/{raw,silver,gold} (pide confirmacion).
-    status                       Muestra los flags actuales y estado de los servicios.
+    logs [servicio]              Sigue logs (de todos o de mongodb|neo4j|app-sociallab).
 
-Ciclo de vida (modo cloud — Atlas + Aura, free tier):
-    cloud                        Arranca SOLO el contenedor 'app' apuntando a las BBDD
-                                cloud definidas en .env.cloud. Requiere haberlo creado
-                                con: cp .env.cloud.example .env.cloud (y rellenar URIs).
-                                Guia: docs/MIGRACION_CLOUD.md
+Ciclo de vida (modo cloud — Atlas + Aura free tier):
+    cloud                        Arranca solo el contenedor app contra cloud.
+                                Requiere apps/sociallab/.env.cloud relleno.
     cloud-down                   Para el contenedor cloud.
 
-Modo laboratorio:
-    unlock {neo4j|ml} <bloque>  Marca un bloque como resuelto y reinicia el contenedor app.
+Modo laboratorio (flags en infra/compose/.env.docker):
+    unlock {neo4j|ml} <bloque>  Marca un bloque como resuelto y reinicia.
     lock   {neo4j|ml} <bloque>  Vuelve a esconderlo (scaffold) y reinicia.
-    solutions                    Desbloquea todo (atajo: LAB_NEO4J=all, LAB_ML=all).
-    exercises                    Bloquea todo (todos los algoritmos como scaffold).
-
+    solutions                    Desbloquea todo.
+    exercises                    Bloquea todo (scaffold).
   Bloques Neo4j: basic | intermediate | advanced
   Bloques ML:    supervised | unsupervised | graph_ml
 
-Pipeline de datos (se ejecuta dentro del contenedor app):
-    seed                         Genera datos sucios en data/raw/.
+Pipeline de datos:
+    seed                         Genera datos sucios en infra/data/sociallab/raw/.
     etl                          Spark: raw -> silver -> gold + carga MongoDB y Neo4j.
     train                        Entrena los modelos ML del LAB_ML actual.
 
-Otros:
-    logs [servicio]              Sigue logs (de todos o de mongodb|neo4j|app).
-    help                         Esta ayuda.
+Ejemplos:
+    ./lab.sh sociallab up exercises
+    ./lab.sh sociallab seed
+    ./lab.sh sociallab etl
+    ./lab.sh sociallab unlock neo4j basic
+    ./lab.sh sociallab unlock ml supervised
+    ./lab.sh sociallab status
 
-Flujo tipico (primer arranque, alumno):
-    ./lab.sh up exercises        # ecosistema en scaffold
-    ./lab.sh seed                # genera raw data
-    ./lab.sh etl                 # carga la red social en Mongo+Neo4j
-    # ... el alumno trabaja sobre los archivos *_ex.py ...
+Web SocialLab:  http://localhost:8000
+Neo4j browser:   http://localhost:7474   (neo4j / neo4jneo4j)
+EOF
+}
 
-Flujo tipico (profesor en clase, va destapando):
-    ./lab.sh unlock neo4j basic           # tras la clase de Cypher basico
-    ./lab.sh unlock ml supervised         # tras la clase de clasificacion
-    ./lab.sh status                       # comprobar que se desbloqueo
+sociallab_cmd() {
+    local cmd="${1:-help}"
+    shift || true
 
-Flujo tipico (alumno con poco ordenador — modo cloud free):
-    cp .env.cloud.example .env.cloud      # plantilla
-    # editar .env.cloud con URIs de Atlas / Aura del profesor
-    ./lab.sh cloud                        # ~150 MB RAM, sin mongo/neo4j locales
+    case "$cmd" in
 
-Web (ambos modos):    http://localhost:8000
-Neo4j browser (local): http://localhost:7474   (neo4j / neo4jneo4j)
-USAGE
+        # ---- Ciclo de vida ----
+        up)
+            ensure_docker
+            mode="${1:-}"
+            if [[ -n "$mode" ]]; then
+                case "$mode" in
+                    exercises)
+                        update_flag LAB_NEO4J none "" > /dev/null
+                        update_flag LAB_ML none "" > /dev/null
+                        log "Modo: ejercicios (todos los algoritmos como scaffold)"
+                        ;;
+                    solutions|all)
+                        update_flag LAB_NEO4J all "" > /dev/null
+                        update_flag LAB_ML all "" > /dev/null
+                        log "Modo: soluciones (todos los algoritmos resueltos)"
+                        ;;
+                    *)
+                        err "Modo desconocido: $mode"
+                        echo "  Modos validos: exercises | solutions"
+                        exit 1
+                        ;;
+                esac
+            else
+                log "Arrancando con la configuracion actual de $ENV_FILE"
+            fi
+            compose up -d --build
+            ok "Web:  http://localhost:8000"
+            ok "Neo4j browser: http://localhost:7474  (neo4j / neo4jneo4j)"
+            ;;
+
+        down)
+            ensure_docker
+            log "Parando contenedores (volumenes preservados)..."
+            compose down
+            ;;
+
+        cloud)
+            local cloud_env="$DIR/apps/sociallab/.env.cloud"
+            if [[ ! -f "$cloud_env" ]]; then
+                err "Falta apps/sociallab/.env.cloud. Copia la plantilla y rellena las URIs:"
+                echo "  cp apps/sociallab/.env.cloud.example apps/sociallab/.env.cloud"
+                echo "  # rellena MONGO_URI, NEO4J_URI, NEO4J_PASSWORD con tus credenciales"
+                echo
+                echo "Guia paso a paso: docs/MIGRACION_CLOUD.md"
+                exit 1
+            fi
+            ensure_docker
+            # Si el modo local esta corriendo, los puertos chocan (8000).
+            if compose ps --status running --quiet 2>/dev/null | grep -q .; then
+                log "Modo local detectado — parandolo primero (mongo/neo4j locales se quedan)..."
+                compose stop
+            fi
+            log "Arrancando solo el contenedor cloud apuntando a Atlas/Aura..."
+            compose_cloud up -d --build
+            ok "Web: http://localhost:8000"
+            ok "Mongo y Neo4j viven en cloud — no hay contenedores locales para esas BBDD"
+            ;;
+
+        cloud-down)
+            ensure_docker
+            log "Parando contenedor cloud..."
+            compose_cloud down
+            ;;
+
+        reset)
+            ensure_docker
+            warn "Esto borrara TODOS los datos de SocialLab:"
+            warn "  - volumenes Docker (mongo_data, neo4j_data, neo4j_logs, spark_ivy)"
+            warn "  - contenido de infra/data/sociallab/{raw,silver,gold}/"
+            read -r -p "Escribe 'yes' para continuar: " ans
+            if [[ "$ans" != "yes" ]]; then
+                log "Cancelado"
+                exit 0
+            fi
+            compose down -v
+            rm -rf "$SOCIALLAB_DATA"/raw/*.json "$SOCIALLAB_DATA"/silver/* "$SOCIALLAB_DATA"/gold/* 2>/dev/null || true
+            ok "Estado limpio. Arranca con: ./lab.sh sociallab up"
+            ;;
+
+        # ---- Modo laboratorio ----
+        unlock)
+            local kind="${1:-}" block="${2:-}"
+            if [[ -z "$kind" || -z "$block" ]]; then
+                err "Uso: ./lab.sh sociallab unlock {neo4j|ml} <bloque>"
+                echo "  neo4j: basic | intermediate | advanced"
+                echo "  ml:    supervised | unsupervised | graph_ml"
+                exit 1
+            fi
+            case "$kind" in
+                neo4j) new=$(update_flag LAB_NEO4J unlock "$block"); ok "LAB_NEO4J = $new" ;;
+                ml)    new=$(update_flag LAB_ML    unlock "$block"); ok "LAB_ML    = $new" ;;
+                *)     err "kind debe ser 'neo4j' o 'ml'"; exit 1 ;;
+            esac
+            ensure_docker
+            sociallab_restart_app
+            if [[ "$kind" == "ml" ]]; then
+                sociallab_train_ml_artifacts
+            fi
+            ;;
+
+        lock)
+            local kind="${1:-}" block="${2:-}"
+            if [[ -z "$kind" || -z "$block" ]]; then
+                err "Uso: ./lab.sh sociallab lock {neo4j|ml} <bloque>"
+                exit 1
+            fi
+            case "$kind" in
+                neo4j) new=$(update_flag LAB_NEO4J lock "$block"); ok "LAB_NEO4J = $new" ;;
+                ml)    new=$(update_flag LAB_ML    lock "$block"); ok "LAB_ML    = $new"; sociallab_clear_ml_artifacts ;;
+                *)     err "kind debe ser 'neo4j' o 'ml'"; exit 1 ;;
+            esac
+            ensure_docker
+            sociallab_restart_app
+            ;;
+
+        solutions)
+            update_flag LAB_NEO4J all "" > /dev/null
+            update_flag LAB_ML all "" > /dev/null
+            ok "Todo desbloqueado: LAB_NEO4J=all, LAB_ML=all"
+            ensure_docker
+            sociallab_restart_app
+            sociallab_train_ml_artifacts
+            ;;
+
+        exercises)
+            update_flag LAB_NEO4J none "" > /dev/null
+            update_flag LAB_ML none "" > /dev/null
+            sociallab_clear_ml_artifacts
+            ok "Todo en modo ejercicio (scaffold)"
+            ensure_docker
+            sociallab_restart_app
+            ;;
+
+        status)
+            echo
+            log "Estado de los flags ($ENV_FILE):"
+            grep -E '^LAB_NEO4J=|^LAB_ML=' "$ENV_FILE" | sed 's/^/    /'
+            echo
+            if command -v docker > /dev/null 2>&1; then
+                log "Servicios Docker (Quasar):"
+                ensure_docker
+                compose ps 2>/dev/null | sed 's/^/    /' || warn "Compose no esta corriendo"
+            fi
+            echo
+            ;;
+
+        # ---- Pipeline de datos ----
+        seed)
+            ensure_docker
+            sociallab_clear_ml_artifacts
+            log "Generando datos sucios en infra/data/sociallab/raw/..."
+            compose exec "$SOCIALLAB_SERVICE" python -m src.seed.generate_dirty_data
+            ;;
+
+        etl)
+            ensure_docker
+            sociallab_clear_ml_artifacts
+            sociallab_ensure_raw_data
+            log "Ejecutando Spark ETL completo (raw -> silver -> gold + carga Mongo/Neo4j)..."
+            compose exec "$SOCIALLAB_SERVICE" python -m src.spark.run_pipeline --all
+            ;;
+
+        train)
+            ensure_docker
+            sociallab_train_ml_artifacts
+            ;;
+
+        logs)
+            ensure_docker
+            local svc="${1:-}"
+            if [[ -n "$svc" ]]; then
+                compose logs -f "$svc"
+            else
+                compose logs -f
+            fi
+            ;;
+
+        help|--help|-h|"")
+            sociallab_usage
+            ;;
+
+        *)
+            err "Comando desconocido: $cmd"
+            sociallab_usage
+            exit 1
+            ;;
+    esac
+}
+
+# ==========================================================
+# Top-level routing
+# ==========================================================
+
+quasar_usage() {
+    cat <<EOF
+Quasar — laboratorio Big Data + IA (multi-app).
+
+Uso:    ./lab.sh <app> <comando> [args]
+
+Apps disponibles:
+    sociallab    Red social poliglota (Twitter + MongoDB + Neo4j + Spark ML)
+                 33 ejercicios distribuidos en 3 bloques Cypher + 3 bloques ML.
+
+Apps planificadas (proximamente):
+    preprolab    Preprocesamiento clasico del Tema 5 (Fase posterior).
+    llmprep      Limpieza de corpus + nanoGPT (Fase posterior).
+
+Comandos comunes (varian por app):
+    up [exercises|solutions]    Arranca la app
+    down                        Para los contenedores
+    seed                        Genera datos
+    etl                         Ejecuta el pipeline ETL
+    train                       Entrena modelos ML
+    status                      Estado actual
+    unlock / lock <kind> <bloque>  Gestiona ejercicios
+    reset                       Borra todos los datos
+
+Ayuda especifica:
+    ./lab.sh sociallab help
+
+Ejemplos:
+    ./lab.sh sociallab up exercises
+    ./lab.sh sociallab seed
+    ./lab.sh sociallab etl
+    ./lab.sh sociallab unlock neo4j basic
+EOF
+}
+
+app="${1:-help}"
+shift || true
+
+case "$app" in
+    sociallab)
+        sociallab_cmd "$@"
+        ;;
+    preprolab|llmprep)
+        warn "La app '$app' aun no esta implementada."
+        echo "  Esta planificada para una fase posterior del roadmap de Quasar."
+        echo "  Por ahora solo 'sociallab' esta operativa."
+        exit 1
+        ;;
+    help|--help|-h|"")
+        quasar_usage
+        ;;
+    *)
+        err "App desconocida: $app"
+        quasar_usage
+        exit 1
         ;;
 esac

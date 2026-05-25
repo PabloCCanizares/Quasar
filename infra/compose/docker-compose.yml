@@ -1,0 +1,91 @@
+# Quasar — ecosistema completo (infra compartida + apps).
+#
+# Estructura del repo:
+#   Quasar/
+#     apps/sociallab/         ← código de la app SocialLab
+#     apps/preprolab/         ← (próximamente)
+#     apps/llmprep/           ← (próximamente)
+#     infra/shared/           ← libs Python compartidas
+#     infra/compose/          ← este compose
+#     infra/data/<app>/       ← data lake por app
+#
+# Uso:
+#   docker compose -f infra/compose/docker-compose.yml --env-file infra/compose/.env.docker up -d --build
+#   docker compose exec app-sociallab python -m src.seed.generate_dirty_data
+#   docker compose exec app-sociallab python -m src.spark.run_pipeline --all
+#   docker compose exec app-sociallab python -m src.spark.models.run_all
+#
+# Normalmente esto se invoca desde ./lab.sh sociallab <comando> (no manualmente).
+#
+# Web SocialLab: http://localhost:8000
+# Neo4j browser: http://localhost:7474   (user neo4j / pass neo4jneo4j)
+# Mongo:         mongodb://localhost:27017
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: quasar-mongo
+    hostname: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ping:1})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5.20-community
+    container_name: quasar-neo4j
+    hostname: neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/neo4jneo4j
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app-sociallab:
+    build:
+      context: ../..
+      dockerfile: apps/sociallab/Dockerfile
+    container_name: quasar-sociallab
+    hostname: app-sociallab
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.docker
+    volumes:
+      # Data lake propio de SocialLab.
+      - ../../infra/data/sociallab:/app/data
+      # Hot-reload del código de la app (no hay que reconstruir tras editar).
+      - ../../apps/sociallab/src:/app/src
+      # Hot-reload de las libs compartidas (cualquier app las usa).
+      - ../../infra/shared:/app/infra/shared
+      # Cache de paquetes Spark (mongo-spark, neo4j-spark) entre reinicios.
+      - spark_ivy:/root/.ivy2
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  neo4j_data:
+  neo4j_logs:
+  spark_ivy:
