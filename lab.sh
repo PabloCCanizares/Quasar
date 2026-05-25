@@ -435,9 +435,9 @@ Modo laboratorio (flags en infra/compose/.env.docker):
     exercises                    Bloquea todos los bloques (scaffold).
   Bloques validos: eda | missing | outliers | integration | transform | normalize | reduce_dim | reduce_inst
 
-Pipeline de datos (Fase 2+, todavia no implementado):
-    seed                         Generara el dataset sintetico de robots.
-    etl                          Ejecutara los bloques del pipeline.
+Pipeline de datos:
+    seed                         Genera el dataset sintetico de robots (Fase 2 OK).
+    etl                          Ejecutara los bloques del pipeline (Fase 3+).
 
 Web PreproLab: http://localhost:8002
 
@@ -570,9 +570,17 @@ preprolab_cmd() {
             compose logs -f "$PREPROLAB_SERVICE"
             ;;
 
-        seed|etl|train)
-            warn "Comando '$cmd' aun no implementado en Fase 1."
-            echo "  Se a\xc3\xb1adira en fases posteriores del roadmap."
+        seed)
+            ensure_docker
+            log "Generando dataset sintetico de la flota de robots..."
+            log "  Output: infra/data/preprolab/raw/{robots,sensors_readings,events,maintenances}.json"
+            compose exec "$PREPROLAB_SERVICE" python -m src.seed.generate_robot_fleet
+            ok "Seed completado. Datos en infra/data/preprolab/raw/"
+            ;;
+
+        etl|train)
+            warn "Comando '$cmd' aun no implementado en Fase $([ "$cmd" = "etl" ] && echo "3+" || echo "futura")."
+            echo "  Se a\xc3\xb1adira segun avance el roadmap del Tema 5."
             exit 1
             ;;
 
