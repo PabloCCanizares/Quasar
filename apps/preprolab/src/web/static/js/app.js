@@ -8,7 +8,7 @@ const BLOCK_INFO = {
     missing:      { label: "Valores perdidos",  desc: "Diagnostico MCAR/MAR/MNAR + imputacion (media, KNN, K-Means, EM, MICE).", render: renderMissing },
     outliers:     { label: "Outliers + ruido",  desc: "IQR, Z-score, boxplot + noise filters (EF/CVCF/IPF).", render: renderOutliers },
     integration:  { label: "Integracion",       desc: "union, joins (4 tipos), correlaciones para deduplicar.", render: renderIntegration },
-    transform:    { label: "Transformacion",    desc: "One-hot, ordinal, multi-flag, discretizacion, pivot/groupby." },
+    transform:    { label: "Transformacion",    desc: "One-hot, ordinal, multi-flag, discretizacion, pivot/groupby.", render: renderTransform },
     normalize:    { label: "Normalizacion",     desc: "Z-score, Min-Max, Robust, Decimal - comparados sobre mismo modelo." },
     reduce_dim:   { label: "Reduccion dim.",    desc: "PCA, t-SNE, AutoEncoders + feature selection." },
     reduce_inst:  { label: "Reduccion inst.",   desc: "SRSWOR, estratificado, balanceado, K-Means compresion." },
@@ -1345,6 +1345,285 @@ async function runDedup() {
         <p class="muted" style="margin-top:10px">A eliminar: <code>${data.columns_dropped.join(", ") || "(ninguna)"}</code></p>
         <p class="muted">Conservadas: <code>${data.columns_kept.join(", ")}</code></p>
     `;
+    el.innerHTML = html;
+}
+
+// ============================================================
+// Render del bloque TRANSFORM (Fase 7)
+// ============================================================
+
+let TRANS_TABLE = "robots";
+
+async function renderTransform() {
+    const content = document.getElementById("content");
+    content.innerHTML = `
+        <h1>Transformación de variables</h1>
+        <p class="muted">Conversiones (one-hot, ordinal, multivaluada) + discretización (equal-width, equal-freq, MDLP) + agregación con groupby.</p>
+
+        <section class="card">
+            <h2>Tabla activa</h2>
+            <div class="table-selector" id="trans-table-selector"></div>
+        </section>
+
+        <section class="card">
+            <h2>TRANS-1 · One-hot <span class="badge" id="badge-onehot">ONEHOT</span></h2>
+            <div class="row">
+                <label>Columna nominal: <input type="text" id="onehot-col" value="fabricante" style="width:160px"></label>
+                <label>Max categorías: <input type="number" id="onehot-max" value="20" min="2" max="100" style="width:60px"></label>
+                <button class="tbtn" onclick="runOnehot()">Codificar</button>
+            </div>
+            <div id="trans-onehot-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>TRANS-2 · Ordinal <span class="badge" id="badge-ordinal">ORDINAL</span></h2>
+            <div class="row">
+                <label>Columna: <input type="text" id="ord-col" value="severidad" style="width:160px"></label>
+                <label>Orden CSV: <input type="text" id="ord-order" value="INFO,WARN,ERROR,CRITICAL" style="width:280px"></label>
+                <button class="tbtn" onclick="runOrdinal()">Codificar</button>
+            </div>
+            <p class="muted" style="font-size:12px">Ej. para events.severidad: <code>INFO,WARN,ERROR,CRITICAL</code>. Probar tabla=events.</p>
+            <div id="trans-ordinal-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>TRANS-3 · Multivaluada <span class="badge" id="badge-multi">MULTI</span></h2>
+            <div class="row">
+                <label>Columna CSV: <input type="text" id="multi-col" value="sensores_activos" style="width:200px"></label>
+                <label>Separador: <input type="text" id="multi-sep" value="," style="width:50px"></label>
+                <button class="tbtn" onclick="runMultivalued()">Descomponer</button>
+            </div>
+            <p class="muted" style="font-size:12px">Ideal para robots.sensores_activos (lista de sensores por robot).</p>
+            <div id="trans-multi-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>TRANS-4 · Discretización <span class="badge" id="badge-disc">DISC</span></h2>
+            <div class="row">
+                <label>Columna numérica: <input type="text" id="disc-col" value="bateria_pct" style="width:160px"></label>
+                <label>Método:
+                    <select id="disc-method">
+                        <option value="equal_width">equal_width</option>
+                        <option value="equal_freq">equal_freq</option>
+                        <option value="mdlp">mdlp (supervisado)</option>
+                    </select>
+                </label>
+                <label>Bins: <input type="number" id="disc-bins" value="5" min="2" max="20" style="width:60px"></label>
+                <button class="tbtn" onclick="runDiscretize()">Discretizar</button>
+            </div>
+            <div id="trans-disc-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>TRANS-5 · GroupBy <span class="badge" id="badge-grp">GROUP</span></h2>
+            <div class="row">
+                <label>By: <input type="text" id="grp-by" value="fabricante" style="width:140px"></label>
+                <label>Agregar columna: <input type="text" id="grp-agg-col" value="bateria_pct" style="width:140px"></label>
+                <label>Función:
+                    <select id="grp-agg">
+                        <option value="mean">mean</option>
+                        <option value="median">median</option>
+                        <option value="sum">sum</option>
+                        <option value="count">count</option>
+                        <option value="min">min</option>
+                        <option value="max">max</option>
+                        <option value="std">std</option>
+                    </select>
+                </label>
+                <button class="tbtn" onclick="runGroupby()">Agrupar</button>
+            </div>
+            <div id="trans-grp-content"></div>
+        </section>
+    `;
+
+    renderTransTableSelector();
+}
+
+function renderTransTableSelector() {
+    const sel = document.getElementById("trans-table-selector");
+    sel.innerHTML = "";
+    TABLES.forEach(t => {
+        const btn = document.createElement("button");
+        btn.textContent = t;
+        btn.className = (t === TRANS_TABLE) ? "tbtn active" : "tbtn";
+        btn.addEventListener("click", () => {
+            TRANS_TABLE = t;
+            renderTransTableSelector();
+        });
+        sel.appendChild(btn);
+    });
+}
+
+function _handleTransScaffold(targetId, badgeId, data, exercise) {
+    const el = document.getElementById(targetId);
+    const badge = document.getElementById(badgeId);
+    badge.classList.add("scaffold");
+    badge.textContent = `${exercise} (scaffold)`;
+    el.innerHTML = `
+        <div class="exercise-placeholder">
+            <p><strong>Ejercicio ${data.exercise} sin resolver.</strong></p>
+            <p class="muted">${data.hint}</p>
+            <p class="muted">Implementa en <code>apps/preprolab/src/web/routes/transform_ex.py</code>.</p>
+        </div>
+    `;
+}
+
+async function runOnehot() {
+    const col = document.getElementById("onehot-col").value;
+    const max = document.getElementById("onehot-max").value;
+    const data = await fetchJSON(`/api/preprolab/transform/onehot/${TRANS_TABLE}/${col}?max_categories=${max}`);
+    if (data.error === "scaffold") return _handleTransScaffold("trans-onehot-content", "badge-onehot", data, "TRANS-1");
+    if (data.error) return _showError("trans-onehot-content", data);
+
+    const badge = document.getElementById("badge-onehot");
+    badge.classList.remove("scaffold");
+    badge.textContent = "TRANS-1 (resuelto)";
+
+    const el = document.getElementById("trans-onehot-content");
+    let html = `
+        <table class='kv stats-table'>
+            <tr><th>Valores únicos</th><td>${data.n_unique}</td></tr>
+            <tr><th>Categorías codificadas</th><td>${data.n_categories_kept}${data.grouped_minor_into_OTROS ? " (incluye OTROS)" : ""}</td></tr>
+            <tr><th>Columnas creadas</th><td><code>${data.new_columns.join(", ")}</code></td></tr>
+        </table>
+    `;
+    // Distribución top 10
+    const top = Object.entries(data.distribution).slice(0, 10);
+    if (top.length > 0) {
+        html += "<h3 style='margin-top:14px'>Distribución original (top 10)</h3>";
+        html += "<table class='kv'><thead><tr><th>Valor</th><th>Frecuencia</th></tr></thead><tbody>";
+        top.forEach(([k, v]) => { html += `<tr><td><code>${k}</code></td><td>${v}</td></tr>`; });
+        html += "</tbody></table>";
+    }
+    el.innerHTML = html;
+}
+
+async function runOrdinal() {
+    const col = document.getElementById("ord-col").value;
+    const order = encodeURIComponent(document.getElementById("ord-order").value);
+    const data = await fetchJSON(`/api/preprolab/transform/ordinal/${TRANS_TABLE}/${col}?order=${order}`);
+    if (data.error === "scaffold") return _handleTransScaffold("trans-ordinal-content", "badge-ordinal", data, "TRANS-2");
+    if (data.error) return _showError("trans-ordinal-content", data);
+
+    const badge = document.getElementById("badge-ordinal");
+    badge.classList.remove("scaffold");
+    badge.textContent = "TRANS-2 (resuelto)";
+
+    const el = document.getElementById("trans-ordinal-content");
+    let html = "";
+    if (data.warning) html += `<p class="muted"><em>${data.warning}</em></p>`;
+    html += "<h3>Mapeo</h3><table class='kv'><thead><tr><th>Valor original</th><th>Encoded</th><th>Frecuencia</th></tr></thead><tbody>";
+    Object.entries(data.mapping).forEach(([k, v]) => {
+        const freq = data.value_counts_original[k] || 0;
+        html += `<tr><td><code>${k}</code></td><td><strong>${v}</strong></td><td>${freq}</td></tr>`;
+    });
+    html += "</tbody></table>";
+    const s = data.stats_encoded;
+    html += `<p class="muted" style="margin-top:10px">Encoded stats: media=${s.mean.toFixed(2)} · mediana=${s.median} · rango [${s.min}, ${s.max}]</p>`;
+    el.innerHTML = html;
+}
+
+async function runMultivalued() {
+    const col = document.getElementById("multi-col").value;
+    const sep = encodeURIComponent(document.getElementById("multi-sep").value);
+    const data = await fetchJSON(`/api/preprolab/transform/multivalued/${TRANS_TABLE}/${col}?separator=${sep}`);
+    if (data.error === "scaffold") return _handleTransScaffold("trans-multi-content", "badge-multi", data, "TRANS-3");
+    if (data.error) return _showError("trans-multi-content", data);
+
+    const badge = document.getElementById("badge-multi");
+    badge.classList.remove("scaffold");
+    badge.textContent = "TRANS-3 (resuelto)";
+
+    const el = document.getElementById("trans-multi-content");
+    const c = data.cardinality_stats;
+    let html = `
+        <table class='kv stats-table'>
+            <tr><th>Vocabulario</th><td><strong>${data.n_unique_values}</strong> valores únicos</td></tr>
+            <tr><th>Cardinalidad por fila</th><td>media=${c.mean} · mediana=${c.median} · rango [${c.min}, ${c.max}]</td></tr>
+        </table>
+        <h3 style='margin-top:14px'>Frecuencia de cada flag</h3>
+        <table class='kv'><thead><tr><th>Flag</th><th>Filas con flag</th><th>%</th></tr></thead><tbody>
+    `;
+    Object.entries(data.flag_frequency).forEach(([k, v]) => {
+        const pct = data.flag_pct[k];
+        html += `<tr><td><code>${k}</code></td><td>${v}</td><td>${pct}%</td></tr>`;
+    });
+    html += "</tbody></table>";
+    el.innerHTML = html;
+}
+
+async function runDiscretize() {
+    const col = document.getElementById("disc-col").value;
+    const method = document.getElementById("disc-method").value;
+    const bins = document.getElementById("disc-bins").value;
+    const data = await fetchJSON(`/api/preprolab/transform/discretize/${TRANS_TABLE}/${col}?method=${method}&bins=${bins}`);
+    if (data.error === "scaffold") return _handleTransScaffold("trans-disc-content", "badge-disc", data, "TRANS-4");
+    if (data.error) return _showError("trans-disc-content", data);
+
+    const badge = document.getElementById("badge-disc");
+    badge.classList.remove("scaffold");
+    badge.textContent = "TRANS-4 (resuelto)";
+
+    const el = document.getElementById("trans-disc-content");
+    let html = "";
+    if (data.warning) html += `<p class="muted"><em>${data.warning}</em></p>`;
+    html += `
+        <table class='kv stats-table'>
+            <tr><th>Método</th><td><strong>${data.method}</strong></td></tr>
+            <tr><th>Bins resultantes</th><td>${data.n_bins_resulting}</td></tr>
+            <tr><th>Edges</th><td><code>${data.edges.map(e => e.toFixed(2)).join(", ")}</code></td></tr>
+        </table>
+    `;
+    if (data.distribution && Object.keys(data.distribution).length > 0) {
+        html += "<h3 style='margin-top:14px'>Distribución</h3>";
+        html += "<table class='kv'><thead><tr><th>Intervalo</th><th>Filas</th></tr></thead><tbody>";
+        Object.entries(data.distribution).forEach(([k, v]) => {
+            html += `<tr><td><code>${k}</code></td><td>${v}</td></tr>`;
+        });
+        html += "</tbody></table>";
+
+        // Bar chart de la distribución
+        const div = document.createElement("div");
+        div.style.height = "260px";
+        el.innerHTML = html;
+        el.appendChild(div);
+        Plotly.newPlot(div, [{
+            x: Object.keys(data.distribution), y: Object.values(data.distribution), type: "bar",
+            marker: { color: "#1d9bf0" },
+        }], {
+            title: { text: `Distribución por bin — ${col}`, font: { color: "#e7e9ea" } },
+            paper_bgcolor: "#16191c", plot_bgcolor: "#16191c",
+            font: { color: "#d7dadc" },
+            xaxis: { tickangle: -45 }, yaxis: { title: "Filas" },
+            margin: { l: 50, r: 20, t: 50, b: 100 },
+        }, { displayModeBar: false });
+        return;
+    }
+    el.innerHTML = html;
+}
+
+async function runGroupby() {
+    const by = document.getElementById("grp-by").value;
+    const aggCol = document.getElementById("grp-agg-col").value;
+    const agg = document.getElementById("grp-agg").value;
+    const data = await fetchJSON(`/api/preprolab/transform/groupby/${TRANS_TABLE}?by=${by}&agg_col=${aggCol}&agg=${agg}`);
+    if (data.error === "scaffold") return _handleTransScaffold("trans-grp-content", "badge-grp", data, "TRANS-5");
+    if (data.error) return _showError("trans-grp-content", data);
+
+    const badge = document.getElementById("badge-grp");
+    badge.classList.remove("scaffold");
+    badge.textContent = "TRANS-5 (resuelto)";
+
+    const el = document.getElementById("trans-grp-content");
+    let html = `
+        <p class="muted">Agrupado por <code>${data.by}</code>, agregando <code>${data.agg_col}</code> con <strong>${data.agg}</strong>. ${data.n_groups} grupos.</p>
+    `;
+    html += "<table class='kv'><thead><tr><th>" + data.by + "</th><th>" + data.agg + "(" + data.agg_col + ")</th></tr></thead><tbody>";
+    Object.entries(data.result).forEach(([k, v]) => {
+        const val = (v === null) ? "<em>null</em>" : (typeof v === "number" ? v.toFixed(3) : v);
+        html += `<tr><td><code>${k}</code></td><td>${val}</td></tr>`;
+    });
+    html += "</tbody></table>";
     el.innerHTML = html;
 }
 

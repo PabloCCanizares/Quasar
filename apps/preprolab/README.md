@@ -6,9 +6,9 @@
 
 PreproLab implementa todas las técnicas del temario sobre un dataset sintético construido a propósito: una **flota de robots autónomos con mantenimiento predictivo**. El escenario incluye intencionadamente los 10 tipos de problemas que el alumno tiene que resolver: valores perdidos (MCAR/MAR/MNAR), outliers de tres tipos, class noise, duplicados, fechas en formatos múltiples, encoding roto, multivaluadas, redundancia entre atributos, etc.
 
-## Estado actual: Fase 6 (bloque integration operativo)
+## Estado actual: Fase 7 (bloque transform operativo)
 
-Dataset generado, EDA + missing + outliers + integration funcionales. Los bloques restantes se irán implementando en fases siguientes.
+Dataset generado, EDA + missing + outliers + integration + transform funcionales. Los bloques restantes se irán implementando en fases siguientes.
 
 | Bloque | Técnicas planificadas | Estado |
 |---|---|---|
@@ -17,6 +17,7 @@ Dataset generado, EDA + missing + outliers + integration funcionales. Los bloque
 | `missing` | Drop + simple (mean/median/mode) + KNN + KMeans + comparativa antes/después | **Fase 4 OK** |
 | `outliers` | IQR + Z-score + gestión (remove/cap/log) + noise filters EF/CVCF/IPF | **Fase 5 OK** |
 | `integration` | union + 4 joins + Pearson + Cramér's V + dedup por correlación | **Fase 6 OK** |
+| `transform` | One-hot + ordinal + multi-flag CSV + discretización (eq-width/eq-freq/MDLP) + groupby | **Fase 7 OK** |
 | `integration` | union, 4 tipos de joins, correlaciones para dedup | Fase 6 |
 | `transform` | One-hot, ordinal, multi-flag, discretización (3 métodos), pivot/groupby | Fase 7 |
 | `normalize` | Z-score, Min-Max, Robust, Decimal — comparados sobre mismo modelo | Fase 8 |
@@ -120,6 +121,29 @@ Validación end-to-end:
 - **dedup_by_correlation(robots, 0.9)**: 14 → 12 columnas (-14.29%).
 
 Cramér's V se implementa manualmente (sin scipy) calculando el chi² de la tabla de contingencia y normalizando por `sqrt(n · min(c-1, r-1))`. Es la generalización natural de Phi para categóricas r×c.
+
+### Bloque TRANSFORM (Fase 7) — detalle
+
+Cinco ejercicios sobre conversiones y discretización del Tema 5:
+
+| Ejercicio | Endpoint | Técnica |
+|---|---|---|
+| TRANS-1 | `GET /api/preprolab/transform/onehot/{tabla}/{columna}?max_categories=N` | One-hot con agrupación OTROS si hay >N valores |
+| TRANS-2 | `GET /api/preprolab/transform/ordinal/{tabla}/{columna}?order=v1,v2,v3` | Ordinal con orden custom (ej. INFO,WARN,ERROR,CRITICAL) |
+| TRANS-3 | `GET /api/preprolab/transform/multivalued/{tabla}/{columna}?separator=,` | CSV interno → flags binarios |
+| TRANS-4 | `GET /api/preprolab/transform/discretize/{tabla}/{columna}?method=equal_width\|equal_freq\|mdlp&bins=N` | Equal-width, Equal-frequency o MDLP supervisado |
+| TRANS-5 | `GET /api/preprolab/transform/groupby/{tabla}?by=col&agg_col=col&agg=mean\|sum\|...` | Agregación con groupby |
+
+Validación end-to-end:
+
+- **one-hot(robots.fabricante)** → 4 columnas binarias (Centauri/Orion/Sirius/Vega), distribución equilibrada.
+- **ordinal(events.severidad, INFO<WARN<ERROR<CRITICAL)** → mapping 1→4, mean encoded = 2.51, mediana = 3 (events ligeramente sesgados a severidades altas).
+- **multivalued(robots.sensores_activos)** → 9 flags binarios (battery, camera_depth, camera_rgb, encoder_wheel, imu, lidar_2d, lidar_3d, temp_cpu, temp_motor), cardinalidad media 4.94 sensores/robot (coincide con el seed `k=randint(3,7)`).
+- **discretize equal_width(bateria_pct, 5)** → edges [20, 36, 52, 68, 84, 100], 5 grupos balanceados.
+- **discretize MDLP(bateria_pct)** → edges [20.0, **28.1**, 29.8, 100.0]. El corte en 28.1 **detecta automáticamente el umbral `<30` que el seed inyecta** en la probabilidad de fallo, validando el algoritmo supervisado.
+- **groupby(robots, by=fabricante, mean(bateria_pct))** → 4 fabricantes con batería media casi idéntica (59-62), coherente con el seed que distribuye uniforme.
+
+MDLP (Fayyad-Irani) se implementa internamente: para cada segmento busca el corte que maximiza ganancia de información respecto al target, aplica criterio MDL para parar, y recursivamente subdivide hasta convergencia. Sin dependencia externa.
 
 **Total previsto**: ~30 ejercicios con patrón scaffold/solución.
 
