@@ -9,7 +9,7 @@ const BLOCK_INFO = {
     outliers:     { label: "Outliers + ruido",  desc: "IQR, Z-score, boxplot + noise filters (EF/CVCF/IPF).", render: renderOutliers },
     integration:  { label: "Integracion",       desc: "union, joins (4 tipos), correlaciones para deduplicar.", render: renderIntegration },
     transform:    { label: "Transformacion",    desc: "One-hot, ordinal, multi-flag, discretizacion, pivot/groupby.", render: renderTransform },
-    normalize:    { label: "Normalizacion",     desc: "Z-score, Min-Max, Robust, Decimal - comparados sobre mismo modelo." },
+    normalize:    { label: "Normalizacion",     desc: "Z-score, Min-Max, Robust, Decimal - comparados sobre mismo modelo.", render: renderNormalize },
     reduce_dim:   { label: "Reduccion dim.",    desc: "PCA, t-SNE, AutoEncoders + feature selection." },
     reduce_inst:  { label: "Reduccion inst.",   desc: "SRSWOR, estratificado, balanceado, K-Means compresion." },
 };
@@ -1625,6 +1625,198 @@ async function runGroupby() {
     });
     html += "</tbody></table>";
     el.innerHTML = html;
+}
+
+// ============================================================
+// Render del bloque NORMALIZE (Fase 8)
+// ============================================================
+
+let NORM_TABLE = "robots";
+let NORM_COLUMN = "bateria_pct";
+
+async function renderNormalize() {
+    const content = document.getElementById("content");
+    content.innerHTML = `
+        <h1>Normalización / Escalado</h1>
+        <p class="muted">Z-score (StandardScaler) · Min-Max ([0,1]) · Robust (mediana+IQR) · Decimal Scaling — y un comparador que muestra la vulnerabilidad Min-Max a outliers.</p>
+
+        <section class="card">
+            <h2>Tabla y columna numérica</h2>
+            <div class="table-selector" id="norm-table-selector"></div>
+            <div class="row" style="margin-top:14px">
+                <label>Columna: <input type="text" id="norm-col" value="bateria_pct" style="width:200px"></label>
+                <span class="muted">Prueba con <code>sensors_readings.temperatura</code> (tiene 491 valores=1000°C → demuestra el problema Min-Max).</span>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>NORM-1 · Z-score <span class="badge" id="badge-zscore-norm">ZSCORE</span></h2>
+            <div class="row"><button class="tbtn" onclick="runNorm('zscore')">Aplicar (x - μ) / σ</button></div>
+            <div id="norm-zscore-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>NORM-2 · Min-Max <span class="badge" id="badge-minmax">MINMAX</span></h2>
+            <div class="row"><button class="tbtn" onclick="runNorm('minmax')">Aplicar (x - min) / (max - min)</button></div>
+            <div id="norm-minmax-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>NORM-3 · Robust <span class="badge" id="badge-robust">ROBUST</span></h2>
+            <div class="row"><button class="tbtn" onclick="runNorm('robust')">Aplicar (x - mediana) / IQR</button></div>
+            <div id="norm-robust-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>NORM-4 · Decimal Scaling <span class="badge" id="badge-decimal">DECIMAL</span></h2>
+            <div class="row"><button class="tbtn" onclick="runNorm('decimal')">Aplicar x / 10^j</button></div>
+            <div id="norm-decimal-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>NORM-5 · Comparativa <span class="badge" id="badge-compare-norm">COMPARE</span></h2>
+            <div class="row">
+                <button class="tbtn" onclick="runNormCompare()">Aplicar los 4 y comparar</button>
+                <span class="muted">Tabla resumen + interpretación automática.</span>
+            </div>
+            <div id="norm-compare-content"></div>
+        </section>
+    `;
+
+    renderNormTableSelector();
+    document.getElementById("norm-col").onchange = (e) => { NORM_COLUMN = e.target.value; };
+}
+
+function renderNormTableSelector() {
+    const sel = document.getElementById("norm-table-selector");
+    sel.innerHTML = "";
+    TABLES.forEach(t => {
+        const btn = document.createElement("button");
+        btn.textContent = t;
+        btn.className = (t === NORM_TABLE) ? "tbtn active" : "tbtn";
+        btn.addEventListener("click", () => { NORM_TABLE = t; renderNormTableSelector(); });
+        sel.appendChild(btn);
+    });
+}
+
+function _handleNormScaffold(targetId, badgeId, data, exercise) {
+    const el = document.getElementById(targetId);
+    const badge = document.getElementById(badgeId);
+    badge.classList.add("scaffold");
+    badge.textContent = `${exercise} (scaffold)`;
+    el.innerHTML = `
+        <div class="exercise-placeholder">
+            <p><strong>Ejercicio ${data.exercise} sin resolver.</strong></p>
+            <p class="muted">${data.hint}</p>
+            <p class="muted">Implementa en <code>apps/preprolab/src/web/routes/normalize_ex.py</code>.</p>
+        </div>
+    `;
+}
+
+async function runNorm(method) {
+    NORM_COLUMN = document.getElementById("norm-col").value;
+    const data = await fetchJSON(`/api/preprolab/normalize/${method}/${NORM_TABLE}/${NORM_COLUMN}`);
+    const exerciseMap = {zscore: "NORM-1", minmax: "NORM-2", robust: "NORM-3", decimal: "NORM-4"};
+    const badgeId = method === "zscore" ? "badge-zscore-norm" : `badge-${method}`;
+    if (data.error === "scaffold") return _handleNormScaffold(`norm-${method}-content`, badgeId, data, exerciseMap[method]);
+    if (data.error) return _showError(`norm-${method}-content`, data);
+
+    const badge = document.getElementById(badgeId);
+    badge.classList.remove("scaffold");
+    badge.textContent = `${exerciseMap[method]} (resuelto)`;
+
+    const el = document.getElementById(`norm-${method}-content`);
+    el.innerHTML = "";
+    if (data.warning) { el.innerHTML = `<p class="muted">${data.warning}</p>`; return; }
+
+    const sb = data.stats_before, sa = data.stats_after;
+    let html = `
+        <table class='kv'>
+            <thead><tr><th></th><th>mean</th><th>median</th><th>std</th><th>min</th><th>max</th></tr></thead>
+            <tbody>
+                <tr><th>Antes</th><td>${sb.mean.toFixed(3)}</td><td>${sb.median.toFixed(3)}</td><td>${sb.std.toFixed(3)}</td><td>${sb.min.toFixed(2)}</td><td>${sb.max.toFixed(2)}</td></tr>
+                <tr><th>Después</th><td>${sa.mean.toFixed(3)}</td><td>${sa.median.toFixed(3)}</td><td>${sa.std.toFixed(3)}</td><td>${sa.min.toFixed(3)}</td><td>${sa.max.toFixed(3)}</td></tr>
+            </tbody>
+        </table>
+        <p class="muted" style="margin-top:8px">Parámetros: <code>${JSON.stringify(data.parameters)}</code></p>
+    `;
+    if (data.compression_diagnostic) {
+        html += `<div class="hints">${data.compression_diagnostic.interpretation}</div>`;
+    }
+    if (data.outlier_sensitivity_note) {
+        html += `<p class="muted" style="font-size:12px"><em>${data.outlier_sensitivity_note}</em></p>`;
+    }
+    el.innerHTML = html;
+
+    if (data.histogram_after) {
+        const div = document.createElement("div");
+        div.style.height = "260px";
+        el.appendChild(div);
+        const ea = data.histogram_after.bin_edges;
+        Plotly.newPlot(div, [{
+            x: ea.slice(0, -1).map((e, i) => (e + ea[i + 1]) / 2),
+            y: data.histogram_after.counts, type: "bar",
+            marker: { color: "#1d9bf0" },
+        }], {
+            title: { text: `Distribución normalizada (${method})`, font: { color: "#e7e9ea" } },
+            paper_bgcolor: "#16191c", plot_bgcolor: "#16191c",
+            font: { color: "#d7dadc" },
+            xaxis: { title: "valor normalizado" }, yaxis: { title: "Frecuencia" },
+            margin: { l: 50, r: 20, t: 50, b: 50 },
+        }, { displayModeBar: false });
+    }
+}
+
+async function runNormCompare() {
+    NORM_COLUMN = document.getElementById("norm-col").value;
+    const el = document.getElementById("norm-compare-content");
+    el.innerHTML = "<span class='loading'>aplicando los 4 métodos...</span>";
+    const data = await fetchJSON(`/api/preprolab/normalize/compare/${NORM_TABLE}/${NORM_COLUMN}`);
+    if (data.error === "scaffold") return _handleNormScaffold("norm-compare-content", "badge-compare-norm", data, "NORM-5");
+    if (data.error) return _showError("norm-compare-content", data);
+
+    const badge = document.getElementById("badge-compare-norm");
+    badge.classList.remove("scaffold");
+    badge.textContent = "NORM-5 (resuelto)";
+
+    el.innerHTML = "";
+    let html = `
+        <h3>Tabla resumen sobre ${data.n.toLocaleString()} filas</h3>
+        <table class='kv'><thead><tr><th>Método</th><th>min</th><th>max</th><th>std</th><th>% en [0, 0.1]</th></tr></thead><tbody>
+    `;
+    data.summary_table.forEach(r => {
+        const pct = r["pct_in_0_0.1"];
+        html += `<tr><td><strong>${r.method}</strong></td><td>${r.min}</td><td>${r.max}</td><td>${r.std}</td><td>${pct}%</td></tr>`;
+    });
+    html += "</tbody></table>";
+    if (data.interpretation && data.interpretation.length > 0) {
+        html += "<div class='hints'><strong>Interpretación automática:</strong><ul>";
+        data.interpretation.forEach(t => { html += `<li>${t}</li>`; });
+        html += "</ul></div>";
+    }
+    el.innerHTML = html;
+
+    const div = document.createElement("div");
+    div.style.height = "360px";
+    el.appendChild(div);
+    const colors = { zscore: "#1d9bf0", minmax: "#ffd166", robust: "#06d6a0", decimal: "#ef476f" };
+    const traces = Object.entries(data.methods).map(([name, info]) => {
+        const e = info.histogram.bin_edges;
+        const centers = e.slice(0, -1).map((x, i) => (x + e[i + 1]) / 2);
+        return {
+            x: centers, y: info.histogram.counts, type: "bar", name,
+            marker: { color: colors[name] }, opacity: 0.6,
+        };
+    });
+    Plotly.newPlot(div, traces, {
+        title: { text: `Distribuciones normalizadas — ${NORM_COLUMN}`, font: { color: "#e7e9ea" } },
+        paper_bgcolor: "#16191c", plot_bgcolor: "#16191c",
+        font: { color: "#d7dadc" },
+        barmode: "overlay",
+        legend: { orientation: "h", y: -0.2 },
+        xaxis: { title: "valor normalizado" }, yaxis: { title: "Frecuencia" },
+        margin: { l: 50, r: 20, t: 50, b: 80 },
+    }, { displayModeBar: false });
 }
 
 // ============================================================

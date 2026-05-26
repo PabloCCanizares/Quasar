@@ -18,6 +18,7 @@ Dataset generado, EDA + missing + outliers + integration + transform funcionales
 | `outliers` | IQR + Z-score + gestión (remove/cap/log) + noise filters EF/CVCF/IPF | **Fase 5 OK** |
 | `integration` | union + 4 joins + Pearson + Cramér's V + dedup por correlación | **Fase 6 OK** |
 | `transform` | One-hot + ordinal + multi-flag CSV + discretización (eq-width/eq-freq/MDLP) + groupby | **Fase 7 OK** |
+| `normalize` | Z-score + Min-Max + Robust + Decimal Scaling + comparativa con detección de outliers | **Fase 8 OK** |
 | `integration` | union, 4 tipos de joins, correlaciones para dedup | Fase 6 |
 | `transform` | One-hot, ordinal, multi-flag, discretización (3 métodos), pivot/groupby | Fase 7 |
 | `normalize` | Z-score, Min-Max, Robust, Decimal — comparados sobre mismo modelo | Fase 8 |
@@ -144,6 +145,29 @@ Validación end-to-end:
 - **groupby(robots, by=fabricante, mean(bateria_pct))** → 4 fabricantes con batería media casi idéntica (59-62), coherente con el seed que distribuye uniforme.
 
 MDLP (Fayyad-Irani) se implementa internamente: para cada segmento busca el corte que maximiza ganancia de información respecto al target, aplica criterio MDL para parar, y recursivamente subdivide hasta convergencia. Sin dependencia externa.
+
+### Bloque NORMALIZE (Fase 8) — detalle
+
+Cinco ejercicios sobre escalado del Tema 5:
+
+| Ejercicio | Endpoint | Fórmula |
+|---|---|---|
+| NORM-1 | `GET /api/preprolab/normalize/zscore/{tabla}/{columna}` | x' = (x - μ) / σ |
+| NORM-2 | `GET /api/preprolab/normalize/minmax/{tabla}/{columna}` | x' = (x - min) / (max - min) |
+| NORM-3 | `GET /api/preprolab/normalize/robust/{tabla}/{columna}` | x' = (x - mediana) / IQR |
+| NORM-4 | `GET /api/preprolab/normalize/decimal/{tabla}/{columna}` | x' = x / 10^j |
+| NORM-5 | `GET /api/preprolab/normalize/compare/{tabla}/{columna}` | aplica los 4 + tabla resumen + interpretación automática |
+
+**Demo killer** sobre `sensors_readings.temperatura` (491 outliers de 1000°C inyectados en 98.440 filas):
+
+| Método | min | max | std | % datos en [0, 0.1] |
+|---|---|---|---|---|
+| zscore | -0.36 | 13.92 | 1.0000 | 17% |
+| **minmax** | 0.00 | 1.00 | 0.0700 | **99.5%** (catastrófico) |
+| robust | -1.00 | 47.52 | 3.3975 | 5% (correcto) |
+| decimal | 0.02 | 1.00 | 0.0686 | 99.5% |
+
+Reproduce exactamente el ejemplo del PDF ("Min-Max con outliers comprime el 99% de los datos en una franja diminuta"). La interpretación automática lo señala: *"Min-Max comprime el 99.5% de los datos en el primer 10% del rango → hay outliers sesgando el escalado."*
 
 **Total previsto**: ~30 ejercicios con patrón scaffold/solución.
 
