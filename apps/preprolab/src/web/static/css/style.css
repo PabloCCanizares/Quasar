@@ -88,6 +88,7 @@ body {
 }
 .dot-locked { background: #71767b; }
 .dot-unlocked { background: #00ba7c; }
+.dot-special { background: #ffd166; box-shadow: 0 0 8px rgba(255,209,102,0.6); }
 
 .legend {
     margin-top: 24px;
