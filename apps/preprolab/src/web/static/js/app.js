@@ -11,7 +11,7 @@ const BLOCK_INFO = {
     transform:    { label: "Transformacion",    desc: "One-hot, ordinal, multi-flag, discretizacion, pivot/groupby.", render: renderTransform },
     normalize:    { label: "Normalizacion",     desc: "Z-score, Min-Max, Robust, Decimal - comparados sobre mismo modelo.", render: renderNormalize },
     reduce_dim:   { label: "Reduccion dim.",    desc: "PCA, t-SNE, AutoEncoders + feature selection.", render: renderReduceDim },
-    reduce_inst:  { label: "Reduccion inst.",   desc: "SRSWOR, estratificado, balanceado, K-Means compresion." },
+    reduce_inst:  { label: "Reduccion inst.",   desc: "SRSWOR, estratificado, balanceado, K-Means compresion.", render: renderReduceInst },
 };
 
 const TABLES = ["robots", "sensors_readings", "events", "maintenances"];
@@ -2101,6 +2101,136 @@ async function runReduceCompare() {
     });
     html += "</tbody></table>";
     html += `<div class="hints" style="margin-top:12px"><em>${data.interpretation}</em></div>`;
+    el.innerHTML = html;
+}
+
+// ============================================================
+// Render del bloque REDUCE_INST (Fase 10)
+// ============================================================
+
+async function renderReduceInst() {
+    const content = document.getElementById("content");
+    content.innerHTML = `
+        <h1>Reducción de instancias</h1>
+        <p class="muted">SRSWOR · estratificado · balanceado · por clusters · K-Means compresión. Trabaja sobre <code>robots</code> con target <code>failure_next_48h</code>.</p>
+
+        <section class="card">
+            <h2>INST-1 · SRSWOR <span class="badge" id="badge-srswor">SRSWOR</span></h2>
+            <div class="row">
+                <label>Fracción: <input type="number" id="srswor-frac" value="0.3" step="0.1" min="0.01" max="1" style="width:70px"></label>
+                <button class="tbtn" onclick="runInst('srswor')">Muestrear</button>
+            </div>
+            <div id="inst-srswor-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>INST-2 · Estratificado <span class="badge" id="badge-stratified">STRAT</span></h2>
+            <div class="row">
+                <label>Fracción: <input type="number" id="strat-frac" value="0.3" step="0.1" min="0.01" max="1" style="width:70px"></label>
+                <button class="tbtn" onclick="runInst('stratified')">Muestrear preservando clases</button>
+            </div>
+            <div id="inst-stratified-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>INST-3 · Balanceado <span class="badge" id="badge-balanced">BAL</span></h2>
+            <div class="row">
+                <label>Estrategia:
+                    <select id="bal-strategy">
+                        <option value="undersample">undersample (reduce mayoritaria)</option>
+                        <option value="oversample">oversample (duplica minoritaria)</option>
+                    </select>
+                </label>
+                <button class="tbtn" onclick="runInst('balanced')">Forzar balance</button>
+            </div>
+            <div id="inst-balanced-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>INST-4 · Por clusters <span class="badge" id="badge-bycluster">CLUST</span></h2>
+            <div class="row">
+                <label>n_clusters: <input type="number" id="bc-nc" value="10" min="2" max="50" style="width:60px"></label>
+                <label>a seleccionar: <input type="number" id="bc-sel" value="3" min="1" max="50" style="width:60px"></label>
+                <button class="tbtn" onclick="runInst('by_clusters')">Aplicar</button>
+            </div>
+            <div id="inst-by_clusters-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>INST-5 · K-Means compresión <span class="badge" id="badge-kmc">KMC</span></h2>
+            <div class="row">
+                <label>K centroides: <input type="number" id="kmc-k" value="50" min="5" max="500" style="width:80px"></label>
+                <button class="tbtn" onclick="runInst('kmeans_compress')">Comprimir</button>
+            </div>
+            <div id="inst-kmeans_compress-content"></div>
+        </section>
+    `;
+}
+
+function _handleInstScaffold(targetId, badgeId, data, exercise) {
+    const el = document.getElementById(targetId);
+    const badge = document.getElementById(badgeId);
+    badge.classList.add("scaffold");
+    badge.textContent = `${exercise} (scaffold)`;
+    el.innerHTML = `
+        <div class="exercise-placeholder">
+            <p><strong>Ejercicio ${data.exercise} sin resolver.</strong></p>
+            <p class="muted">${data.hint}</p>
+            <p class="muted">Implementa en <code>apps/preprolab/src/web/routes/reduce_inst_ex.py</code>.</p>
+        </div>
+    `;
+}
+
+async function runInst(method) {
+    const params = new URLSearchParams();
+    if (method === "srswor") params.set("fraction", document.getElementById("srswor-frac").value);
+    if (method === "stratified") params.set("fraction", document.getElementById("strat-frac").value);
+    if (method === "balanced") params.set("strategy", document.getElementById("bal-strategy").value);
+    if (method === "by_clusters") {
+        params.set("n_clusters", document.getElementById("bc-nc").value);
+        params.set("n_clusters_to_select", document.getElementById("bc-sel").value);
+    }
+    if (method === "kmeans_compress") params.set("k", document.getElementById("kmc-k").value);
+
+    const el = document.getElementById(`inst-${method}-content`);
+    el.innerHTML = "<span class='loading'>computando...</span>";
+    const data = await fetchJSON(`/api/preprolab/reduce_inst/${method}/robots?${params}`);
+    const exMap = {srswor: "INST-1", stratified: "INST-2", balanced: "INST-3", by_clusters: "INST-4", kmeans_compress: "INST-5"};
+    const badgeMap = {srswor: "badge-srswor", stratified: "badge-stratified", balanced: "badge-balanced", by_clusters: "badge-bycluster", kmeans_compress: "badge-kmc"};
+    if (data.error === "scaffold") return _handleInstScaffold(`inst-${method}-content`, badgeMap[method], data, exMap[method]);
+    if (data.error) return _showError(`inst-${method}-content`, data);
+    document.getElementById(badgeMap[method]).classList.remove("scaffold");
+    document.getElementById(badgeMap[method]).textContent = `${exMap[method]} (resuelto)`;
+
+    let html = `
+        <table class='kv stats-table'>
+            <tr><th>Filas</th><td>${data.rows_before.toLocaleString()} → <strong>${data.rows_after.toLocaleString()}</strong></td></tr>
+    `;
+    if (data.compression_ratio) html += `<tr><th>Ratio compresión</th><td>${data.compression_ratio}x</td></tr>`;
+    if ("ratio_preserved" in data) html += `<tr><th>Ratio target preservado</th><td>${data.ratio_preserved}</td></tr>`;
+    if (data.chosen_clusters) html += `<tr><th>Clusters elegidos</th><td>${data.chosen_clusters.join(", ")}</td></tr>`;
+    if (data.target_size_per_class) html += `<tr><th>Tamaño por clase</th><td>${data.target_size_per_class}</td></tr>`;
+    html += "</table>";
+
+    // Distribución antes vs después
+    const distB = data.class_distribution_before;
+    const distA = data.class_distribution_after;
+    html += "<h3 style='margin-top:14px'>Distribución por clase</h3>";
+    html += "<table class='kv'><thead><tr><th>clase</th><th>antes</th><th>después</th></tr></thead><tbody>";
+    Object.keys(distB).forEach(k => {
+        const before = distB[k];
+        const after = distA[k] || 0;
+        const pctB = (100 * before / data.rows_before).toFixed(1);
+        const pctA = data.rows_after > 0 ? (100 * after / data.rows_after).toFixed(1) : "0";
+        html += `<tr><td><code>${k}</code></td><td>${before.toLocaleString()} (${pctB}%)</td><td>${after.toLocaleString()} (${pctA}%)</td></tr>`;
+    });
+    html += "</tbody></table>";
+
+    if (data.cluster_size_stats) {
+        const s = data.cluster_size_stats;
+        html += `<p class="muted">Tamaño de clusters: min=${s.min} · max=${s.max} · mean=${s.mean} · median=${s.median}</p>`;
+    }
+
     el.innerHTML = html;
 }
 

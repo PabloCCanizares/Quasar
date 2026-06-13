@@ -20,6 +20,7 @@ Dataset generado, EDA + missing + outliers + integration + transform funcionales
 | `transform` | One-hot + ordinal + multi-flag CSV + discretización (eq-width/eq-freq/MDLP) + groupby | **Fase 7 OK** |
 | `normalize` | Z-score + Min-Max + Robust + Decimal Scaling + comparativa con detección de outliers | **Fase 8 OK** |
 | `reduce_dim` | PCA + t-SNE + feature selection Filter / Wrapper / Embedded + comparador de las 3 familias | **Fase 9 OK** |
+| `reduce_inst` | SRSWOR + estratificado + balanceado + por clusters + K-Means compresión | **Fase 10 OK** |
 | `integration` | union, 4 tipos de joins, correlaciones para dedup | Fase 6 |
 | `transform` | One-hot, ordinal, multi-flag, discretización (3 métodos), pivot/groupby | Fase 7 |
 | `normalize` | Z-score, Min-Max, Robust, Decimal — comparados sobre mismo modelo | Fase 8 |
