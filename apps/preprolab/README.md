@@ -19,6 +19,7 @@ Dataset generado, EDA + missing + outliers + integration + transform funcionales
 | `integration` | union + 4 joins + Pearson + Cramér's V + dedup por correlación | **Fase 6 OK** |
 | `transform` | One-hot + ordinal + multi-flag CSV + discretización (eq-width/eq-freq/MDLP) + groupby | **Fase 7 OK** |
 | `normalize` | Z-score + Min-Max + Robust + Decimal Scaling + comparativa con detección de outliers | **Fase 8 OK** |
+| `reduce_dim` | PCA + t-SNE + feature selection Filter / Wrapper / Embedded + comparador de las 3 familias | **Fase 9 OK** |
 | `integration` | union, 4 tipos de joins, correlaciones para dedup | Fase 6 |
 | `transform` | One-hot, ordinal, multi-flag, discretización (3 métodos), pivot/groupby | Fase 7 |
 | `normalize` | Z-score, Min-Max, Robust, Decimal — comparados sobre mismo modelo | Fase 8 |
@@ -168,6 +169,28 @@ Cinco ejercicios sobre escalado del Tema 5:
 | decimal | 0.02 | 1.00 | 0.0686 | 99.5% |
 
 Reproduce exactamente el ejemplo del PDF ("Min-Max con outliers comprime el 99% de los datos en una franja diminuta"). La interpretación automática lo señala: *"Min-Max comprime el 99.5% de los datos en el primer 10% del rango → hay outliers sesgando el escalado."*
+
+### Bloque REDUCE_DIM (Fase 9) — detalle
+
+Seis ejercicios sobre proyección + feature selection del Tema 5:
+
+| Ejercicio | Endpoint | Técnica |
+|---|---|---|
+| REDDIM-1 | `GET /api/preprolab/reduce_dim/pca/robots?n_components=N` | PCA con autoselección (≥95% varianza) + scatter 2D coloreado por target |
+| REDDIM-2 | `GET /api/preprolab/reduce_dim/tsne/robots?perplexity=P&max_rows=M` | t-SNE 2D (no lineal, visualización) |
+| REDDIM-3 | `GET /api/preprolab/reduce_dim/filter/robots?method=chi2\|pearson\|variance\|mutual_info&k=N` | Filter univariate |
+| REDDIM-4 | `GET /api/preprolab/reduce_dim/wrapper/robots?method=forward\|backward\|rfe&k=N` | Wrapper con RandomForest base |
+| REDDIM-5 | `GET /api/preprolab/reduce_dim/embedded/robots?method=lasso\|rf_importance` | Embedded (Lasso L1 o RF importance) |
+| REDDIM-6 | `GET /api/preprolab/reduce_dim/compare/robots?k=N` | Aplica las 3 familias + consenso |
+
+AutoEncoders queda documentado en el PDF pero no implementado (requeriría PyTorch + entrenamiento costoso).
+
+Validación end-to-end sobre `robots` con target `failure_next_48h`:
+
+- **PCA auto**: 4 componentes explican 99.7% varianza (PC1=49.8% por las features altamente correlacionadas).
+- **Filter mutual_info top 5**: `bateria_pct`, `battery_health_v2`, `consumo_total_kwh`, `voltaje_v`, `consumo_kw`.
+- **RF importance top 5**: `battery_health_v2` (0.234), `voltaje_v` (0.193), `bateria_pct` (0.188), `consumo_total_kwh` (0.176), `consumo_kw` (0.170).
+- **Compare**: **CONSENSO FUERTE** — las 3 familias (filter/wrapper/embedded) eligen las mismas 5 features. Solo `firmware_version` queda descartada por todas (score 0 en mutual info, importance 0.04 en RF). Esto demuestra que cuando las features son claramente informativas, los 3 métodos convergen al mismo resultado, lo que da confianza en la selección final.
 
 **Total previsto**: ~30 ejercicios con patrón scaffold/solución.
 
