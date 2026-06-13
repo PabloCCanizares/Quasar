@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from src.web.database import get_async_client
-from src.web.routes import analytics
+from src.web.routes import analytics, pipeline
 
 WEB_DIR = Path(__file__).parent
 STATIC_DIR = WEB_DIR / "static"
@@ -53,6 +53,8 @@ app.add_middleware(
 
 # API routes
 app.include_router(analytics.router)
+# Pipeline Studio: no es ejercicio, siempre disponible
+app.include_router(pipeline.router)
 
 
 @app.get("/api/health")
