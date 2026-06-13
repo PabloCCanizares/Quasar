@@ -96,9 +96,12 @@ else:
     from src.web.routes import reduce_dim_ex as _reduce_dim
 router.include_router(_reduce_dim.router)
 
-# Los otros bloques se irán incluyendo en sus fases:
-#   if "reduce_inst" in _unlocked_blocks: from src.web.routes import reduce_inst
-#   ...
+# --- Bloque reduce_inst ---
+if "reduce_inst" in _unlocked_blocks:
+    from src.web.routes import reduce_inst as _reduce_inst
+else:
+    from src.web.routes import reduce_inst_ex as _reduce_inst
+router.include_router(_reduce_inst.router)
 
 
 @router.get("/api/preprolab/lab/status")
@@ -107,6 +110,6 @@ async def lab_status():
     return {
         "app": "preprolab",
         "blocks": {b: (b in _unlocked_blocks) for b in BLOCKS},
-        "phase": 9,
-        "note": "Bloques implementados: eda, missing, outliers, integration, transform, normalize, reduce_dim. Próximos: reduce_inst, Pipeline Studio.",
+        "phase": 10,
+        "note": "Todos los 8 bloques del Tema 5 implementados. Próximo: Pipeline Studio (hito final).",
     }
