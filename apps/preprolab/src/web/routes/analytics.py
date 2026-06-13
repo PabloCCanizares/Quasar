@@ -89,8 +89,15 @@ else:
     from src.web.routes import normalize_ex as _normalize
 router.include_router(_normalize.router)
 
+# --- Bloque reduce_dim ---
+if "reduce_dim" in _unlocked_blocks:
+    from src.web.routes import reduce_dim as _reduce_dim
+else:
+    from src.web.routes import reduce_dim_ex as _reduce_dim
+router.include_router(_reduce_dim.router)
+
 # Los otros bloques se irán incluyendo en sus fases:
-#   if "reduce_dim" in _unlocked_blocks: from src.web.routes import reduce_dim
+#   if "reduce_inst" in _unlocked_blocks: from src.web.routes import reduce_inst
 #   ...
 
 
@@ -100,6 +107,6 @@ async def lab_status():
     return {
         "app": "preprolab",
         "blocks": {b: (b in _unlocked_blocks) for b in BLOCKS},
-        "phase": 8,
-        "note": "Bloques implementados: eda, missing, outliers, integration, transform, normalize. Próximos: reduce_dim, reduce_inst, Pipeline Studio.",
+        "phase": 9,
+        "note": "Bloques implementados: eda, missing, outliers, integration, transform, normalize, reduce_dim. Próximos: reduce_inst, Pipeline Studio.",
     }

@@ -10,7 +10,7 @@ const BLOCK_INFO = {
     integration:  { label: "Integracion",       desc: "union, joins (4 tipos), correlaciones para deduplicar.", render: renderIntegration },
     transform:    { label: "Transformacion",    desc: "One-hot, ordinal, multi-flag, discretizacion, pivot/groupby.", render: renderTransform },
     normalize:    { label: "Normalizacion",     desc: "Z-score, Min-Max, Robust, Decimal - comparados sobre mismo modelo.", render: renderNormalize },
-    reduce_dim:   { label: "Reduccion dim.",    desc: "PCA, t-SNE, AutoEncoders + feature selection." },
+    reduce_dim:   { label: "Reduccion dim.",    desc: "PCA, t-SNE, AutoEncoders + feature selection.", render: renderReduceDim },
     reduce_inst:  { label: "Reduccion inst.",   desc: "SRSWOR, estratificado, balanceado, K-Means compresion." },
 };
 
@@ -1817,6 +1817,291 @@ async function runNormCompare() {
         xaxis: { title: "valor normalizado" }, yaxis: { title: "Frecuencia" },
         margin: { l: 50, r: 20, t: 50, b: 80 },
     }, { displayModeBar: false });
+}
+
+// ============================================================
+// Render del bloque REDUCE_DIM (Fase 9)
+// ============================================================
+
+async function renderReduceDim() {
+    const content = document.getElementById("content");
+    content.innerHTML = `
+        <h1>Reducción de dimensionalidad + Feature Selection</h1>
+        <p class="muted">PCA (proyección lineal) · t-SNE (visualización 2D) · 3 familias de feature selection: Filter, Wrapper, Embedded.</p>
+        <p class="muted">Trabaja siempre sobre <code>robots</code> con target <code>failure_next_48h</code>.</p>
+
+        <section class="card">
+            <h2>REDDIM-1 · PCA <span class="badge" id="badge-pca">PCA</span></h2>
+            <div class="row">
+                <label>n_components: <input type="number" id="pca-n" value="0" min="0" max="20" style="width:60px"></label>
+                <span class="muted">0 = auto (≥95% varianza acumulada)</span>
+                <button class="tbtn" onclick="runPCA()">Aplicar PCA</button>
+            </div>
+            <div id="reddim-pca-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>REDDIM-2 · t-SNE <span class="badge" id="badge-tsne">TSNE</span></h2>
+            <div class="row">
+                <label>perplexity: <input type="number" id="tsne-p" value="30" min="5" max="50" style="width:60px"></label>
+                <label>max_rows: <input type="number" id="tsne-rows" value="1500" min="200" max="5000" style="width:80px"></label>
+                <button class="tbtn" onclick="runTSNE()">Aplicar t-SNE (lento, ~15-30s)</button>
+            </div>
+            <div id="reddim-tsne-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>REDDIM-3 · Filter <span class="badge" id="badge-filter">FILTER</span></h2>
+            <div class="row">
+                <label>Método:
+                    <select id="filter-method">
+                        <option value="mutual_info">mutual_info</option>
+                        <option value="chi2">chi²</option>
+                        <option value="pearson">pearson</option>
+                        <option value="variance">variance</option>
+                    </select>
+                </label>
+                <label>k: <input type="number" id="filter-k" value="5" min="1" max="20" style="width:60px"></label>
+                <button class="tbtn" onclick="runFilter()">Aplicar</button>
+            </div>
+            <div id="reddim-filter-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>REDDIM-4 · Wrapper <span class="badge" id="badge-wrapper">WRAP</span></h2>
+            <div class="row">
+                <label>Método:
+                    <select id="wrapper-method">
+                        <option value="rfe">RFE (más rápido)</option>
+                        <option value="forward">forward</option>
+                        <option value="backward">backward</option>
+                    </select>
+                </label>
+                <label>k: <input type="number" id="wrapper-k" value="5" min="1" max="20" style="width:60px"></label>
+                <button class="tbtn" onclick="runWrapper()">Aplicar (~10-20s)</button>
+            </div>
+            <div id="reddim-wrapper-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>REDDIM-5 · Embedded <span class="badge" id="badge-emb">EMB</span></h2>
+            <div class="row">
+                <label>Método:
+                    <select id="emb-method">
+                        <option value="rf_importance">RF feature_importances_</option>
+                        <option value="lasso">Lasso L1</option>
+                    </select>
+                </label>
+                <label>threshold: <input type="number" id="emb-threshold" value="0.05" step="0.01" min="0" max="1" style="width:80px"></label>
+                <button class="tbtn" onclick="runEmbedded()">Aplicar</button>
+            </div>
+            <div id="reddim-emb-content"></div>
+        </section>
+
+        <section class="card">
+            <h2>REDDIM-6 · Comparativa <span class="badge" id="badge-cmp-rd">COMPARE</span></h2>
+            <div class="row">
+                <label>k: <input type="number" id="cmp-k" value="5" min="1" max="20" style="width:60px"></label>
+                <button class="tbtn" onclick="runReduceCompare()">Comparar las 3 familias</button>
+            </div>
+            <div id="reddim-cmp-content"></div>
+        </section>
+    `;
+}
+
+function _handleReduceScaffold(targetId, badgeId, data, exercise) {
+    const el = document.getElementById(targetId);
+    const badge = document.getElementById(badgeId);
+    badge.classList.add("scaffold");
+    badge.textContent = `${exercise} (scaffold)`;
+    el.innerHTML = `
+        <div class="exercise-placeholder">
+            <p><strong>Ejercicio ${data.exercise} sin resolver.</strong></p>
+            <p class="muted">${data.hint}</p>
+            <p class="muted">Implementa en <code>apps/preprolab/src/web/routes/reduce_dim_ex.py</code>.</p>
+        </div>
+    `;
+}
+
+async function runPCA() {
+    const n = document.getElementById("pca-n").value;
+    const el = document.getElementById("reddim-pca-content");
+    el.innerHTML = "<span class='loading'>computando PCA...</span>";
+    const data = await fetchJSON(`/api/preprolab/reduce_dim/pca/robots?n_components=${n}`);
+    if (data.error === "scaffold") return _handleReduceScaffold("reddim-pca-content", "badge-pca", data, "REDDIM-1");
+    if (data.error) return _showError("reddim-pca-content", data);
+    document.getElementById("badge-pca").classList.remove("scaffold");
+    document.getElementById("badge-pca").textContent = "REDDIM-1 (resuelto)";
+
+    el.innerHTML = "";
+    let html = `
+        <table class='kv stats-table'>
+            <tr><th>Features originales</th><td>${data.n_features}</td></tr>
+            <tr><th>Componentes elegidos</th><td><strong>${data.n_components_requested}</strong></td></tr>
+            <tr><th>Varianza acumulada</th><td>${(data.cumulative_variance[data.cumulative_variance.length-1] * 100).toFixed(2)}%</td></tr>
+        </table>
+        <p class="muted" style="margin-top:8px">Features: <code>${data.features.join(", ")}</code></p>
+    `;
+    el.innerHTML = html;
+
+    // Bar chart de explained_variance
+    const bar = document.createElement("div");
+    bar.style.height = "260px";
+    el.appendChild(bar);
+    Plotly.newPlot(bar, [
+        { y: data.all_components_cumvar.map(v => v * 100), type: "scatter", mode: "lines+markers",
+          marker: { color: "#1d9bf0" }, name: "% varianza acumulada" },
+    ], {
+        title: { text: "Varianza acumulada por componente", font: { color: "#e7e9ea" } },
+        paper_bgcolor: "#16191c", plot_bgcolor: "#16191c",
+        font: { color: "#d7dadc" },
+        xaxis: { title: "componente #" }, yaxis: { title: "%", range: [0, 105] },
+        margin: { l: 50, r: 20, t: 50, b: 50 },
+        shapes: [{ type: "line", x0: 0, x1: data.all_components_cumvar.length-1, y0: 95, y1: 95,
+                   line: { color: "#ef476f", dash: "dash" } }],
+    }, { displayModeBar: false });
+
+    // Scatter 2D PC1 vs PC2 coloreado por target
+    const sc = document.createElement("div");
+    sc.style.height = "360px";
+    el.appendChild(sc);
+    const s = data.scatter_2d;
+    const class0 = s.pc1.map((_, i) => s.target[i] === 0 ? i : -1).filter(i => i >= 0);
+    const class1 = s.pc1.map((_, i) => s.target[i] === 1 ? i : -1).filter(i => i >= 0);
+    Plotly.newPlot(sc, [
+        { x: class0.map(i => s.pc1[i]), y: class0.map(i => s.pc2[i]), mode: "markers",
+          marker: { color: "#1d9bf0", size: 5, opacity: 0.6 }, name: "no fallo (0)", type: "scatter" },
+        { x: class1.map(i => s.pc1[i]), y: class1.map(i => s.pc2[i]), mode: "markers",
+          marker: { color: "#ef476f", size: 5, opacity: 0.7 }, name: "fallo (1)", type: "scatter" },
+    ], {
+        title: { text: "Proyección PCA 2D coloreada por target", font: { color: "#e7e9ea" } },
+        paper_bgcolor: "#16191c", plot_bgcolor: "#16191c",
+        font: { color: "#d7dadc" },
+        xaxis: { title: "PC1" }, yaxis: { title: "PC2" },
+        margin: { l: 50, r: 20, t: 50, b: 50 },
+    }, { displayModeBar: false });
+}
+
+async function runTSNE() {
+    const p = document.getElementById("tsne-p").value;
+    const rows = document.getElementById("tsne-rows").value;
+    const el = document.getElementById("reddim-tsne-content");
+    el.innerHTML = "<span class='loading'>computando t-SNE (puede tardar 15-30s)...</span>";
+    const data = await fetchJSON(`/api/preprolab/reduce_dim/tsne/robots?perplexity=${p}&max_rows=${rows}`);
+    if (data.error === "scaffold") return _handleReduceScaffold("reddim-tsne-content", "badge-tsne", data, "REDDIM-2");
+    if (data.error) return _showError("reddim-tsne-content", data);
+    document.getElementById("badge-tsne").classList.remove("scaffold");
+    document.getElementById("badge-tsne").textContent = "REDDIM-2 (resuelto)";
+
+    el.innerHTML = `<p class="muted">${data.n_samples_used} filas usadas · perplexity=${data.perplexity} · KL divergence=${data.kl_divergence.toFixed(3)}</p>`;
+    const sc = document.createElement("div");
+    sc.style.height = "420px";
+    el.appendChild(sc);
+    const s = data.scatter_2d;
+    const class0 = s.x.map((_, i) => s.target[i] === 0 ? i : -1).filter(i => i >= 0);
+    const class1 = s.x.map((_, i) => s.target[i] === 1 ? i : -1).filter(i => i >= 0);
+    Plotly.newPlot(sc, [
+        { x: class0.map(i => s.x[i]), y: class0.map(i => s.y[i]), mode: "markers",
+          marker: { color: "#1d9bf0", size: 4, opacity: 0.6 }, name: "no fallo (0)", type: "scatter" },
+        { x: class1.map(i => s.x[i]), y: class1.map(i => s.y[i]), mode: "markers",
+          marker: { color: "#ef476f", size: 4, opacity: 0.7 }, name: "fallo (1)", type: "scatter" },
+    ], {
+        title: { text: "t-SNE 2D coloreado por target", font: { color: "#e7e9ea" } },
+        paper_bgcolor: "#16191c", plot_bgcolor: "#16191c",
+        font: { color: "#d7dadc" },
+        xaxis: { title: "t-SNE 1" }, yaxis: { title: "t-SNE 2" },
+        margin: { l: 50, r: 20, t: 50, b: 50 },
+    }, { displayModeBar: false });
+}
+
+function _renderRanking(targetId, data) {
+    const el = document.getElementById(targetId);
+    let html = `<p class="muted">Seleccionadas (${data.selected.length}): <strong>${data.selected.join(", ")}</strong></p>`;
+    html += "<h3>Ranking de features</h3>";
+    html += "<table class='kv'><thead><tr><th>#</th><th>feature</th><th>score</th>";
+    if (data.ranking[0] && "pvalue" in data.ranking[0]) html += "<th>p-value</th>";
+    html += "</tr></thead><tbody>";
+    data.ranking.forEach((r, i) => {
+        const selected = data.selected.includes(r.feature);
+        html += `<tr class='${selected ? "" : ""}'>`;
+        html += `<td>${i+1}</td><td><strong style='${selected ? "color:#06d6a0" : ""}'>${r.feature}</strong></td>`;
+        html += `<td>${r.score.toFixed(4)}</td>`;
+        if ("pvalue" in r) html += `<td>${r.pvalue !== null ? r.pvalue.toExponential(2) : "—"}</td>`;
+        html += "</tr>";
+    });
+    html += "</tbody></table>";
+    el.innerHTML = html;
+}
+
+async function runFilter() {
+    const m = document.getElementById("filter-method").value;
+    const k = document.getElementById("filter-k").value;
+    const el = document.getElementById("reddim-filter-content");
+    el.innerHTML = "<span class='loading'>computando...</span>";
+    const data = await fetchJSON(`/api/preprolab/reduce_dim/filter/robots?method=${m}&k=${k}`);
+    if (data.error === "scaffold") return _handleReduceScaffold("reddim-filter-content", "badge-filter", data, "REDDIM-3");
+    if (data.error) return _showError("reddim-filter-content", data);
+    document.getElementById("badge-filter").classList.remove("scaffold");
+    document.getElementById("badge-filter").textContent = "REDDIM-3 (resuelto)";
+    _renderRanking("reddim-filter-content", data);
+}
+
+async function runWrapper() {
+    const m = document.getElementById("wrapper-method").value;
+    const k = document.getElementById("wrapper-k").value;
+    const el = document.getElementById("reddim-wrapper-content");
+    el.innerHTML = "<span class='loading'>computando con cross-validation (~10-20s)...</span>";
+    const data = await fetchJSON(`/api/preprolab/reduce_dim/wrapper/robots?method=${m}&k=${k}`);
+    if (data.error === "scaffold") return _handleReduceScaffold("reddim-wrapper-content", "badge-wrapper", data, "REDDIM-4");
+    if (data.error) return _showError("reddim-wrapper-content", data);
+    document.getElementById("badge-wrapper").classList.remove("scaffold");
+    document.getElementById("badge-wrapper").textContent = "REDDIM-4 (resuelto)";
+    el.innerHTML = `
+        <p class="muted">Método: <code>${data.method}</code></p>
+        <p>Seleccionadas (${data.selected.length}): <strong style='color:#06d6a0'>${data.selected.join(", ")}</strong></p>
+        <p class="muted">Eliminadas: <code>${data.dropped.join(", ")}</code></p>
+    `;
+}
+
+async function runEmbedded() {
+    const m = document.getElementById("emb-method").value;
+    const t = document.getElementById("emb-threshold").value;
+    const el = document.getElementById("reddim-emb-content");
+    el.innerHTML = "<span class='loading'>computando...</span>";
+    const data = await fetchJSON(`/api/preprolab/reduce_dim/embedded/robots?method=${m}&threshold=${t}`);
+    if (data.error === "scaffold") return _handleReduceScaffold("reddim-emb-content", "badge-emb", data, "REDDIM-5");
+    if (data.error) return _showError("reddim-emb-content", data);
+    document.getElementById("badge-emb").classList.remove("scaffold");
+    document.getElementById("badge-emb").textContent = "REDDIM-5 (resuelto)";
+    _renderRanking("reddim-emb-content", data);
+}
+
+async function runReduceCompare() {
+    const k = document.getElementById("cmp-k").value;
+    const el = document.getElementById("reddim-cmp-content");
+    el.innerHTML = "<span class='loading'>aplicando las 3 familias (~30s)...</span>";
+    const data = await fetchJSON(`/api/preprolab/reduce_dim/compare/robots?k=${k}`);
+    if (data.error === "scaffold") return _handleReduceScaffold("reddim-cmp-content", "badge-cmp-rd", data, "REDDIM-6");
+    if (data.error) return _showError("reddim-cmp-content", data);
+    document.getElementById("badge-cmp-rd").classList.remove("scaffold");
+    document.getElementById("badge-cmp-rd").textContent = "REDDIM-6 (resuelto)";
+
+    let html = "<h3>Features por familia (k=" + data.k + ")</h3>";
+    html += "<table class='kv'><thead><tr><th>Familia</th><th>Features elegidas</th></tr></thead><tbody>";
+    Object.entries(data.selected_by_family).forEach(([fam, feats]) => {
+        html += `<tr><td><strong>${fam}</strong></td><td><code>${feats.join(", ")}</code></td></tr>`;
+    });
+    html += "</tbody></table>";
+
+    html += "<h3 style='margin-top:14px'>Consenso entre familias</h3>";
+    html += "<table class='kv'><thead><tr><th>Feature</th><th>Elegida por</th></tr></thead><tbody>";
+    data.cross_family_agreement.forEach(r => {
+        const color = r.selected_by_n_families === 3 ? "#06d6a0" : (r.selected_by_n_families === 2 ? "#ffd166" : "#71767b");
+        html += `<tr><td><strong style='color:${color}'>${r.feature}</strong></td><td>${r.selected_by_n_families}/3 — ${r.families.join(", ")}</td></tr>`;
+    });
+    html += "</tbody></table>";
+    html += `<div class="hints" style="margin-top:12px"><em>${data.interpretation}</em></div>`;
+    el.innerHTML = html;
 }
 
 // ============================================================
