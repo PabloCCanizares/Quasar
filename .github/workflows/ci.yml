@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    name: Tests (módulos puros)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instalar dependencias de test
+        run: pip install -r requirements-test.txt
+
+      - name: pytest
+        run: python -m pytest tests/ -v
+
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar ruff
+        run: pip install ruff
+
+      - name: ruff check
+        # No bloqueante por ahora: reporta pero no falla el build.
+        run: ruff check apps/ infra/ tests/ --output-format=github || true
+
+  smoke-build:
+    name: Docker build (las 3 apps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build SocialLab
+        run: docker build -f apps/sociallab/Dockerfile -t quasar-sociallab .
+
+      - name: Build PreproLab
+        run: docker build -f apps/preprolab/Dockerfile -t quasar-preprolab .
+
+      - name: Build LLM Lab
+        run: docker build -f apps/llmprep/Dockerfile -t quasar-llmprep .
