@@ -13,7 +13,7 @@ Enseña cómo se limpia un corpus masivo antes de entrenar un modelo de lenguaje
 |---|---|---|
 | **Ingest** | Corpus sintético tipo Wikipedia ES + 10 categorías de ruido | **Fase 13 OK** |
 | `clean` | fix_encoding, strip_html, length_filter, language_filter, pii_removal, pipeline | **Fase 14 OK** |
-| `dedup` | Near-duplicates con MinHash/LSH + grafo `:Document -[:SIMILAR_TO]-> :Document` en Neo4j | Fase 15 |
+| `dedup` | exact + MinHash + LSH + grafo `:Document -[:SIMILAR_TO]-> :Document` en Neo4j + Cypher | **Fase 15 OK** |
 | `tokenize` | Tokenizer BPE (HuggingFace) + shards `.bin` estilo nanoGPT | Fase 16 |
 | `train` | nanoGPT (PyTorch) con presets tiny/small/medium/large + comparativa sucio vs limpio | Fase 17 |
 
@@ -35,6 +35,26 @@ Seis ejercicios scaffold/solución, cada uno validado contra el ground truth:
 | CLEAN-6 | `/api/llmprep/clean/pipeline` | corpus -56% chars, -15% docs |
 
 Endpoint no-gateado: `corpus_stats`. El R=0.64 de language_filter es un buen punto de enseñanza: la heurística no detecta lorem ipsum como inglés (queda en 'unknown'), lo que muestra los límites de la detección por stopwords.
+
+### Bloque DEDUP (Fase 15)
+
+Cinco ejercicios sobre deduplicación + grafo Neo4j (la pata poliglota de LLM Lab). MinHash y LSH implementados desde cero (sin datasketch):
+
+| Ejercicio | Endpoint | Técnica |
+|---|---|---|
+| DEDUP-1 | `GET /api/llmprep/dedup/exact` | Duplicados exactos por md5 del texto |
+| DEDUP-2 | `GET /api/llmprep/dedup/minhash` | Firmas MinHash (64 hashes, shingles k=3) |
+| DEDUP-3 | `GET /api/llmprep/dedup/lsh_candidates` | LSH banding (16 bandas × 4 filas) → pares near-dup |
+| DEDUP-4 | `POST /api/llmprep/dedup/build_graph` | Carga `:Document -[:SIMILAR_TO {jaccard}]->` a Neo4j |
+| DEDUP-5 | `GET /api/llmprep/dedup/graph_clusters` | Cypher: docs con más vecinos (content farms) |
+
+Validación end-to-end:
+- **exact**: 605 duplicados (gt 200) — el extra son colisiones naturales del generador de plantillas; **buen punto de enseñanza**: el dedup exacto encuentra más de lo "etiquetado" porque los corpus reales tienen colisiones inesperadas.
+- **lsh_candidates**: 7472 pares candidatos → 2385 confirmados (jaccard ≥ 0.5), 404 involucran un dup conocido.
+- **build_graph**: carga 727 nodos + 2385 aristas SIMILAR_TO a Neo4j.
+- **graph_clusters**: Cypher devuelve docs con hasta 33 vecinos (avg jaccard ~0.9) → candidatos a content farm. Explorable en el Neo4j browser (`:7474`).
+
+Esto conecta directamente con lo que el alumno aprendió en SocialLab (Cypher, grafos), aplicado ahora a un problema de NLP real.
 
 ## Arranque rápido
 
