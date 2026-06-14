@@ -74,3 +74,25 @@ body {
     padding: 32px; margin-top: 24px; text-align: center;
 }
 .content .placeholder h3 { color: #a78bfa; margin-bottom: 8px; }
+
+/* Componentes compartidos */
+.content h2 { margin: 4px 0 14px; font-size: 18px; color: #fff; }
+.content h3 { margin-bottom: 10px; font-size: 15px; color: #d7d0e6; }
+.card {
+    background: #1c1630; border: 1px solid #2f2840; border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 18px;
+}
+.row { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
+.tbtn {
+    background: #14101f; color: #d7d0e6; border: 1px solid #2f2840;
+    border-radius: 8px; padding: 8px 16px; cursor: pointer;
+    font-family: "SF Mono", Consolas, monospace; font-size: 13px; transition: all 0.15s;
+}
+.tbtn:hover { border-color: #a78bfa; }
+table.kv { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.kv th, table.kv td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #2f2840; }
+table.kv th { color: #8b7fa8; font-weight: 600; background: #14101f; }
+table.kv td { color: #d7d0e6; }
+table.stats-table { width: auto; }
+.error { color: #f87171; padding: 8px 12px; background: #2a1620; border-radius: 6px; }
+.loading { color: #8b7fa8; font-style: italic; }

@@ -32,6 +32,14 @@ def _unlocked() -> set[str]:
 _unlocked_blocks = _unlocked()
 
 
+# --- Bloque clean ---
+if "clean" in _unlocked_blocks:
+    from src.web.routes import clean as _clean
+else:
+    from src.web.routes import clean_ex as _clean
+router.include_router(_clean.router)
+
+
 @router.get("/api/llmprep/lab/status")
 async def lab_status():
     """Estado actual del laboratorio: qué bloques están desbloqueados."""
