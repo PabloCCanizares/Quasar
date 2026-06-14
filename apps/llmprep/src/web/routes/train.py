@@ -17,11 +17,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query
 
-from src.web.corpus_loader import load_corpus
 from src.train.ngram_lm import NgramLM
+from src.web.corpus_loader import load_corpus
 
 # Reutilizamos las funciones de limpieza del bloque clean (solución)
-from src.web.routes.clean import fix_encoding, strip_html, detect_language, redact_pii
+from src.web.routes.clean import detect_language, fix_encoding, redact_pii, strip_html
 
 router = APIRouter(prefix="/api/llmprep/train", tags=["llmprep-train"])
 

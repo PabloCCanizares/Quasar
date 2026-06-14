@@ -26,8 +26,8 @@ Configuración aceptada en `run`:
 
 from __future__ import annotations
 
-from typing import Optional
 import time
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -164,13 +164,18 @@ def _apply_balance(X: pd.DataFrame, y: pd.Series, strategy: str, seed: int) -> t
 @router.post("/run")
 async def run(config: PipelineConfig) -> dict:
     """Ejecuta el pipeline configurado y devuelve métricas + ROC."""
-    from sklearn.ensemble import RandomForestClassifier
-    from sklearn.model_selection import train_test_split
-    from sklearn.metrics import (
-        roc_auc_score, f1_score, precision_score, recall_score,
-        accuracy_score, roc_curve, confusion_matrix,
-    )
     from sklearn.decomposition import PCA
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.metrics import (
+        accuracy_score,
+        confusion_matrix,
+        f1_score,
+        precision_score,
+        recall_score,
+        roc_auc_score,
+        roc_curve,
+    )
+    from sklearn.model_selection import train_test_split
     from sklearn.preprocessing import StandardScaler
 
     t0 = time.time()

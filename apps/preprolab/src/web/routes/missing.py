@@ -445,9 +445,9 @@ async def compare(tabla: str, columna: str) -> dict:
     median_series = series.fillna(series.median())
 
     # 3. KNN
+    from sklearn.cluster import KMeans
     from sklearn.impute import KNNImputer
     from sklearn.preprocessing import StandardScaler
-    from sklearn.cluster import KMeans
 
     numeric_cols = _numeric_columns(df)
     X = df[numeric_cols].copy()

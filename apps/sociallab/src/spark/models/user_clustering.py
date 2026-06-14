@@ -13,15 +13,15 @@ Features:
 Output: Cada usuario con su cluster asignado + descripción del cluster.
 """
 
-from pyspark.sql import SparkSession
-from pyspark.ml.feature import VectorAssembler, StandardScaler
+from pyspark.ml import Pipeline
 from pyspark.ml.clustering import KMeans
 from pyspark.ml.evaluation import ClusteringEvaluator
-from pyspark.ml import Pipeline
+from pyspark.ml.feature import StandardScaler, VectorAssembler
+from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-from src.config import GOLD_PATH
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH
 
 MODEL_NAME = "user_clustering"
 
@@ -97,7 +97,7 @@ def train(spark: SparkSession = None, input_path: str = None,
     clustered = model.transform(df)
 
     # Cluster profiles
-    print(f"\nCluster profiles:")
+    print("\nCluster profiles:")
     profiles = (
         clustered
         .groupBy("cluster")

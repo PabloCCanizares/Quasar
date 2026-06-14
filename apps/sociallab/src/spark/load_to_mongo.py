@@ -7,11 +7,11 @@ Uso:
     python -m src.spark.load_to_mongo
 """
 
-from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 
-from src.config import SILVER_PATH, GOLD_PATH, MONGO_URI, MONGO_DB
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH, MONGO_DB, MONGO_URI, SILVER_PATH
 
 
 def get_spark_mongo() -> SparkSession:

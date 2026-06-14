@@ -57,6 +57,7 @@ router.include_router(_na.router)
 
 # --- Endpoints ML (siempre incluidos; degradan si no hay parquets) ---
 from src.web.routes import ml as _ml
+
 router.include_router(_ml.router)
 
 

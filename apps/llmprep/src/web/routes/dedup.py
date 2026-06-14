@@ -214,8 +214,8 @@ async def build_graph(
     Crea nodos :Document y aristas :SIMILAR_TO con peso = jaccard estimado.
     El alumno luego explora los clusters con Cypher (DEDUP-5).
     """
+    from infra.shared.config_base import NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER
     from infra.shared.neo4j import neo4j_write
-    from infra.shared.config_base import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 
     docs = load_corpus()[:sample]
     sigs = [_minhash_signature(_shingles(d.get("text", ""))) for d in docs]
@@ -271,7 +271,7 @@ async def graph_clusters(limit: int = Query(10, ge=1, le=50)) -> dict:
     Devuelve los documentos con mayor grado en el grafo SIMILAR_TO
     (los que tienen más casi-duplicados → candidatos a content farm).
     """
-    from infra.shared.config_base import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+    from infra.shared.config_base import NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER
     try:
         from neo4j import GraphDatabase
         driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))

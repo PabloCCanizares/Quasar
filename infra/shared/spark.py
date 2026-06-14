@@ -12,8 +12,7 @@ from pathlib import Path
 
 from pyspark.sql import SparkSession
 
-from infra.shared.config_base import SPARK_MASTER, IS_LOCAL
-
+from infra.shared.config_base import IS_LOCAL, SPARK_MASTER
 
 # Posibles ubicaciones de Java 17 en macOS (Apple Silicon y x86).
 # Se prueban en orden hasta encontrar una válida.

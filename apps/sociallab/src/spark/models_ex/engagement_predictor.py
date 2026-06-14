@@ -22,8 +22,8 @@ de virality (clasificacion binaria) llama a `build_features` desde aqui.
 
 from pyspark.sql import SparkSession
 
-from src.config import SILVER_PATH, GOLD_PATH
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH, SILVER_PATH
 
 MODEL_NAME = "engagement_predictor"
 

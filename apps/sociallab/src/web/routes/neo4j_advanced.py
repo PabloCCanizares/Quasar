@@ -13,11 +13,12 @@ Si LAB_NEO4J no contiene 'advanced', se importa neo4j_advanced_ex.py
 (scaffolds) en su lugar.
 """
 
-from fastapi import APIRouter
 from uuid import uuid4
 
-from src.web.routes._neo4j_helper import neo4j_query
+from fastapi import APIRouter
+
 from src.web.database import get_db, neo4j_write
+from src.web.routes._neo4j_helper import neo4j_query
 
 router = APIRouter(prefix="/api/analytics/neo4j", tags=["analytics-neo4j"])
 db = get_db()

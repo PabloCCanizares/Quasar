@@ -21,8 +21,8 @@ Predice si un usuario va a dejar de publicar.
 
 from pyspark.sql import SparkSession
 
-from src.config import SILVER_PATH, GOLD_PATH
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH, SILVER_PATH
 
 MODEL_NAME = "churn_predictor"
 

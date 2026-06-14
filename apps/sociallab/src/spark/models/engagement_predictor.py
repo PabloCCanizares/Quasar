@@ -14,15 +14,15 @@ Label: likes_count (continuo)
 Modelo: GBTRegressor.
 """
 
-from pyspark.sql import SparkSession
-from pyspark.ml.feature import VectorAssembler, StandardScaler
-from pyspark.ml.regression import GBTRegressor
-from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml import Pipeline
+from pyspark.ml.evaluation import RegressionEvaluator
+from pyspark.ml.feature import StandardScaler, VectorAssembler
+from pyspark.ml.regression import GBTRegressor
+from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-from src.config import SILVER_PATH, GOLD_PATH
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH, SILVER_PATH
 
 MODEL_NAME = "engagement_predictor"
 
@@ -98,13 +98,13 @@ def train(spark: SparkSession = None, silver_path: str = None,
     output_path = output_path or str(GOLD_PATH / "models" / MODEL_NAME)
 
     print(f"{'='*60}")
-    print(f"ENGAGEMENT PREDICTOR — Training")
+    print("ENGAGEMENT PREDICTOR — Training")
     print(f"{'='*60}")
 
     # Build features
     df = build_features(spark, silver_path, gold_path)
     print(f"\nDataset: {df.count()} posts")
-    print(f"Likes stats:")
+    print("Likes stats:")
     df.select("likes_count").describe().show()
 
     # Split
@@ -139,7 +139,7 @@ def train(spark: SparkSession = None, silver_path: str = None,
         "test_size": test_df.count(),
     }
 
-    print(f"\nResults:")
+    print("\nResults:")
     for k, v in metrics.items():
         print(f"  {k}: {v}")
 
@@ -147,7 +147,7 @@ def train(spark: SparkSession = None, silver_path: str = None,
     gbt_model = model.stages[-1]
     importances = list(zip(FEATURE_COLS, gbt_model.featureImportances.toArray()))
     importances.sort(key=lambda x: x[1], reverse=True)
-    print(f"\nFeature Importance:")
+    print("\nFeature Importance:")
     for feat, imp in importances:
         print(f"  {feat}: {imp:.4f}")
 

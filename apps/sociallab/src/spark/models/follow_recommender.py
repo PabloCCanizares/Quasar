@@ -15,12 +15,11 @@ que combina señales del grafo y del contenido.
 Output: DataFrame con (user_id, recommended_id, score, reason)
 """
 
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Window
 from pyspark.sql import functions as F
-from pyspark.sql import Window
 
-from src.config import SILVER_PATH, GOLD_PATH
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH, SILVER_PATH
 
 MODEL_NAME = "follow_recommender"
 
@@ -42,7 +41,7 @@ def build_recommendations(spark: SparkSession = None, silver_path: str = None,
     output_path = output_path or str(GOLD_PATH / "models" / MODEL_NAME)
 
     print(f"{'='*60}")
-    print(f"FOLLOW RECOMMENDER — Building")
+    print("FOLLOW RECOMMENDER — Building")
     print(f"{'='*60}")
 
     posts = spark.read.parquet(f"{silver_path}/posts")

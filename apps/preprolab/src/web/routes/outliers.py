@@ -307,11 +307,11 @@ async def noise_filter(
     if target not in df.columns:
         raise HTTPException(404, detail=f"Target desconocido: {target}")
 
-    from sklearn.tree import DecisionTreeClassifier
-    from sklearn.neighbors import KNeighborsClassifier
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
     from sklearn.model_selection import StratifiedKFold
+    from sklearn.neighbors import KNeighborsClassifier
     from sklearn.preprocessing import StandardScaler
+    from sklearn.tree import DecisionTreeClassifier
 
     # Solo trabajamos con filas completas en numéricas (drop nulls para no
     # tener que imputar en este bloque — usaríamos el de missing antes).

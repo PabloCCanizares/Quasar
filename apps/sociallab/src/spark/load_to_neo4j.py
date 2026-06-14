@@ -11,12 +11,16 @@ Uso:
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-from src.config import (
-    SILVER_PATH, GOLD_PATH,
-    MONGO_URI, MONGO_DB,
-    NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD,
-)
 from infra.shared.spark import build_spark
+from src.config import (
+    GOLD_PATH,
+    MONGO_DB,
+    MONGO_URI,
+    NEO4J_PASSWORD,
+    NEO4J_URI,
+    NEO4J_USER,
+    SILVER_PATH,
+)
 
 
 def get_spark_neo4j() -> SparkSession:

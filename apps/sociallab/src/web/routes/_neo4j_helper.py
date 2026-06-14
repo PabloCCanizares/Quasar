@@ -4,7 +4,7 @@ Centralizado para que los bloques basic/intermediate/advanced (y sus scaffolds)
 no duplican la conexion ni el manejo de errores.
 """
 
-from src.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+from src.config import NEO4J_PASSWORD, NEO4J_URI, NEO4J_USER
 
 
 def neo4j_query(cypher: str, params: dict = None):

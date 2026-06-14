@@ -22,8 +22,8 @@ Reutiliza `build_features` del scaffold de engagement_predictor.
 
 from pyspark.sql import SparkSession
 
-from src.config import SILVER_PATH, GOLD_PATH
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH, SILVER_PATH
 from src.spark.models_ex.engagement_predictor import build_features
 
 MODEL_NAME = "virality_classifier"

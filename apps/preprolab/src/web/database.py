@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from infra.shared.mongo import (
     get_async_client,
-    get_sync_client,
     get_async_db,
+    get_sync_client,
+)
+from infra.shared.mongo import (
     get_sync_db as _shared_sync_db,
 )
 from infra.shared.neo4j import neo4j_write  # noqa: F401

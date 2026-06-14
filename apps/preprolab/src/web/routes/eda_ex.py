@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 
-from src.web.data_loader import TABLES, load_table, is_seeded
+from src.web.data_loader import TABLES, is_seeded, load_table
 
 router = APIRouter(prefix="/api/preprolab/eda", tags=["preprolab-eda"])
 

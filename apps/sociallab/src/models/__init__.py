@@ -1,3 +1,3 @@
-from src.models.user import User, UserCreate, UserUpdate
+from src.models.interaction import Event, Follow, Like
 from src.models.post import Post, PostCreate
-from src.models.interaction import Like, Follow, Event
+from src.models.user import User, UserCreate, UserUpdate
