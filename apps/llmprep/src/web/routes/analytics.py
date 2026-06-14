@@ -39,6 +39,13 @@ else:
     from src.web.routes import clean_ex as _clean
 router.include_router(_clean.router)
 
+# --- Bloque dedup ---
+if "dedup" in _unlocked_blocks:
+    from src.web.routes import dedup as _dedup
+else:
+    from src.web.routes import dedup_ex as _dedup
+router.include_router(_dedup.router)
+
 
 @router.get("/api/llmprep/lab/status")
 async def lab_status():
