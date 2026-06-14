@@ -4,7 +4,6 @@ import math
 
 from quasar_ngram import NgramLM
 
-
 CLEAN = [
     "la fotosíntesis es un proceso biológico fundamental",
     "el imperio romano fue una civilización antigua y poderosa",

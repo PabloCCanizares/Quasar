@@ -261,7 +261,7 @@ def main() -> None:
     print("LLM Lab — Generador del corpus sucio (estilo Wikipedia ES dump)")
     print("=" * 64)
     print(f"Output: {RAW_PATH}")
-    print(f"Semilla: 1234 (reproducible)")
+    print("Semilla: 1234 (reproducible)")
     print()
 
     docs = generate_corpus()

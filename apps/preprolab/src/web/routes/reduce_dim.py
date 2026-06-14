@@ -223,7 +223,8 @@ async def filter_method(
     """
     X, y, cols = _prepare_xy(tabla, target)
 
-    from sklearn.feature_selection import chi2 as sk_chi2, mutual_info_classif
+    from sklearn.feature_selection import chi2 as sk_chi2
+    from sklearn.feature_selection import mutual_info_classif
     from sklearn.preprocessing import MinMaxScaler
 
     if method == "chi2":
@@ -291,7 +292,8 @@ async def wrapper(
 
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.feature_selection import (
-        SequentialFeatureSelector, RFE,
+        RFE,
+        SequentialFeatureSelector,
     )
     from sklearn.preprocessing import StandardScaler
 
@@ -357,8 +359,8 @@ async def embedded(
     """
     X, y, cols = _prepare_xy(tabla, target)
 
-    from sklearn.linear_model import LogisticRegression
     from sklearn.ensemble import RandomForestClassifier
+    from sklearn.linear_model import LogisticRegression
     from sklearn.preprocessing import StandardScaler
 
     X_scaled = StandardScaler().fit_transform(X)

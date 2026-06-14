@@ -21,7 +21,7 @@ cargar la solucion oficial en `neo4j_intermediate.py`.
 
 from fastapi import APIRouter
 
-from src.web.routes._neo4j_helper import neo4j_query, exercise_placeholder
+from src.web.routes._neo4j_helper import exercise_placeholder, neo4j_query
 
 router = APIRouter(prefix="/api/analytics/neo4j", tags=["analytics-neo4j"])
 

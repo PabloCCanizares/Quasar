@@ -1,7 +1,6 @@
 """Tests del tokenizer BPE de LLM Lab (módulo puro, sin dependencias)."""
 
-from quasar_bpe import BPETokenizer, END
-
+from quasar_bpe import END, BPETokenizer
 
 CORPUS = [
     "la fotosíntesis es un proceso biológico fundamental",

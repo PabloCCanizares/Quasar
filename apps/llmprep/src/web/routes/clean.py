@@ -23,7 +23,7 @@ import unicodedata
 
 from fastapi import APIRouter, HTTPException, Query
 
-from src.web.corpus_loader import load_corpus, is_ingested
+from src.web.corpus_loader import is_ingested, load_corpus
 
 router = APIRouter(prefix="/api/llmprep/clean", tags=["llmprep-clean"])
 

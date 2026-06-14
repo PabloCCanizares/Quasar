@@ -13,7 +13,7 @@ for candidate in (_HERE, _HERE.parent.parent):  # apps/llmprep y Quasar/
         sys.path.insert(0, str(candidate))
 
 import uvicorn  # noqa: E402
-from src.config import WEB_HOST, WEB_PORT, WEB_DEBUG  # noqa: E402
+from src.config import WEB_DEBUG, WEB_HOST, WEB_PORT  # noqa: E402
 
 if __name__ == "__main__":
     uvicorn.run(

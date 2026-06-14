@@ -17,15 +17,15 @@ Label: is_spam (0/1)
 Modelo: RandomForest + evaluación con métricas.
 """
 
-from pyspark.sql import SparkSession
-from pyspark.ml.feature import VectorAssembler, StandardScaler
-from pyspark.ml.classification import RandomForestClassifier, GBTClassifier
-from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClassificationEvaluator
 from pyspark.ml import Pipeline
+from pyspark.ml.classification import GBTClassifier, RandomForestClassifier
+from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClassificationEvaluator
+from pyspark.ml.feature import StandardScaler, VectorAssembler
+from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-from src.config import GOLD_PATH
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH
 
 MODEL_NAME = "spam_detector"
 
@@ -53,7 +53,7 @@ def train(spark: SparkSession = None, input_path: str = None, output_path: str =
     output_path = output_path or str(GOLD_PATH / "models" / MODEL_NAME)
 
     print(f"{'='*60}")
-    print(f"SPAM DETECTOR — Training")
+    print("SPAM DETECTOR — Training")
     print(f"{'='*60}")
 
     # Load features
@@ -107,7 +107,7 @@ def train(spark: SparkSession = None, input_path: str = None, output_path: str =
         "test_size": test_df.count(),
     }
 
-    print(f"\nResults:")
+    print("\nResults:")
     for k, v in metrics.items():
         print(f"  {k}: {v}")
 
@@ -115,7 +115,7 @@ def train(spark: SparkSession = None, input_path: str = None, output_path: str =
     rf_model = model.stages[-1]
     importances = list(zip(FEATURE_COLS, rf_model.featureImportances.toArray()))
     importances.sort(key=lambda x: x[1], reverse=True)
-    print(f"\nFeature Importance:")
+    print("\nFeature Importance:")
     for feat, imp in importances:
         print(f"  {feat}: {imp:.4f}")
 

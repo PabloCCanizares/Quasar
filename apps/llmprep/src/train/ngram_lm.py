@@ -19,7 +19,7 @@ from __future__ import annotations
 import math
 import random
 import re
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 
 
 class NgramLM:

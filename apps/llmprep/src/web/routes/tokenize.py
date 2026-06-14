@@ -20,8 +20,8 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, Query
 
 from src.config import GOLD_PATH
-from src.web.corpus_loader import load_corpus
 from src.tokenize.bpe import BPETokenizer
+from src.web.corpus_loader import load_corpus
 
 router = APIRouter(prefix="/api/llmprep/tokenize", tags=["llmprep-tokenize"])
 

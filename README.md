@@ -14,8 +14,8 @@
                               │                │                │
                 ┌─────────────┴────┐  ┌────────┴────────┐  ┌────┴──────────┐
                 │    SocialLab     │  │    PreproLab    │  │    LLM Lab    │
-                │  Red social      │  │  Tema 5 puro    │  │ NLP / nanoGPT │
-                │  poliglota       │  │ Preprocesamiento│  │ (planificada) │
+                │  Red social      │  │  Tema 5 puro    │  │  NLP / corpus │
+                │  poliglota       │  │ Preprocesamiento│  │  para LLMs    │
                 │   :8000          │  │     :8002       │  │    :8001      │
                 └──────────────────┘  └─────────────────┘  └───────────────┘
 
@@ -42,24 +42,26 @@ No es Jupyter, no es Streamlit, no es un boilerplate genérico. Es una **platafo
 
 ## Apps del ecosistema
 
+Las **tres apps están completas** y operativas:
+
 | App | Estado | Puerto | Tema docente | Bloques | Ejercicios |
 |---|---|---|---|---|---|
-| [**SocialLab**](apps/sociallab/README.md) | Operativa | `:8000` | Bases poliglotas + Spark ML | 3 Cypher (basic/intermediate/advanced) + 3 ML (supervised/unsupervised/graph_ml) | 33 |
+| [**SocialLab**](apps/sociallab/README.md) | **Completa** | `:8000` | Bases poliglotas + Spark ML | 3 Cypher (basic/intermediate/advanced) + 3 ML (supervised/unsupervised/graph_ml) | 33 |
 | [**PreproLab**](apps/preprolab/README.md) | **Completa** | `:8002` | Tema 5 — Preprocesamiento | 8 bloques (eda, missing, outliers, integration, transform, normalize, reduce_dim, reduce_inst) **+ Pipeline Studio** | 46 |
-| **LLM Lab** | Planificada | `:8001` | NLP / LLMs | clean, dedup, tokenize, train | ~15 previstos |
+| [**LLM Lab**](apps/llmprep/README.md) | **Completa** | `:8001` | NLP / LLMs | ingest + 4 bloques (clean, dedup, tokenize, train) | 18 |
 
-Cada app tiene su propio README con la lista detallada de ejercicios y casos empresariales que cubren.
+Cada app tiene su propio README con la lista detallada de ejercicios y casos empresariales que cubren. **~97 ejercicios** scaffold/solución en total a lo largo del curso.
 
 ### Comandos globales (afectan a todo el ecosistema)
 
 ```bash
-./lab.sh tour            # arranca todo + seed + ETL: demo en 1 comando (~2-3 min)
+./lab.sh tour            # arranca las 3 apps + seed + ETL: demo en 1 comando (~2-3 min)
 ./lab.sh all-solutions   # destapa todos los bloques de todas las apps (demo profesor)
 ./lab.sh all-exercises   # bloquea todo (modo alumno por defecto)
 ./lab.sh down-all        # para todo el ecosistema
 ```
 
-Las dos webs se enlazan entre sí: hay un selector de apps en la cabecera de cada una.
+Las tres webs se enlazan entre sí: hay un selector de apps en la cabecera de cada una (`:8000` ↔ `:8001` ↔ `:8002`).
 
 ## Arranque rápido
 

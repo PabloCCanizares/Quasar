@@ -29,8 +29,8 @@ Tu trabajo: leer features, montar Pipeline, entrenar, evaluar y guardar.
 
 from pyspark.sql import SparkSession
 
-from src.config import GOLD_PATH
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH
 
 MODEL_NAME = "spam_detector"
 

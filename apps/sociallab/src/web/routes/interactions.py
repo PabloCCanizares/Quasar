@@ -1,9 +1,9 @@
-from uuid import uuid4
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
-from src.models.interaction import Like, Follow
+from src.models.interaction import Follow, Like
 from src.web.database import get_db, neo4j_write
 
 router = APIRouter(prefix="/api", tags=["interactions"])

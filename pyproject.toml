@@ -1,0 +1,29 @@
+[tool.ruff]
+# Configuración de ruff para Quasar.
+line-length = 120
+target-version = "py311"
+extend-exclude = [
+    ".venv",
+    "apps/sociallab/src/web/static/js",  # JS, no Python
+    "infra/data",
+]
+
+[tool.ruff.lint]
+# Reglas razonables sin ser agresivas (es código docente, prioriza claridad).
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501",  # line too long (algunos docstrings largos pedagógicos)
+    "E402",  # module import not at top (sys.path bootstrap en main.py)
+    "F401",  # imported but unused (re-exports en config/database)
+    "E702",  # multiple statements (compactación intencional en tests)
+    "E712",  # comparison to False (necesario en filtros Spark: col == False)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"**/config/__init__.py" = ["F401", "E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"

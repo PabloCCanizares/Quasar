@@ -19,8 +19,8 @@ import argparse
 
 from pyspark.sql import SparkSession
 
-from src.config import RAW_PATH, SILVER_PATH, GOLD_PATH
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH, RAW_PATH, SILVER_PATH
 
 
 def get_spark(with_connectors: bool = False) -> SparkSession:
@@ -46,8 +46,8 @@ def main():
     gold = str(GOLD_PATH)
 
     if run_etl or args.all:
-        from src.spark.etl_silver import run_silver
         from src.spark.etl_gold import run_gold
+        from src.spark.etl_silver import run_silver
 
         print(f"Raw:    {raw}")
         print(f"Silver: {silver}")
@@ -60,8 +60,12 @@ def main():
 
     if args.all or args.mongo:
         from src.spark.load_to_mongo import (
-            load_users, load_posts, load_likes, load_follows,
-            load_hashtag_trends, load_user_stats,
+            load_follows,
+            load_hashtag_trends,
+            load_likes,
+            load_posts,
+            load_user_stats,
+            load_users,
         )
         print("=" * 50)
         print("SPARK → MONGODB")
@@ -76,8 +80,11 @@ def main():
 
     if args.all or args.neo4j:
         from src.spark.load_to_neo4j import (
-            clean_neo4j, load_user_nodes, load_hashtag_nodes,
-            load_follows_edges, load_interested_in_edges,
+            clean_neo4j,
+            load_follows_edges,
+            load_hashtag_nodes,
+            load_interested_in_edges,
+            load_user_nodes,
         )
         print("=" * 50)
         print("SPARK → NEO4J")

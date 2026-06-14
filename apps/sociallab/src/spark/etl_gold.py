@@ -11,10 +11,8 @@ Genera tablas analíticas que alimentan la app y sirven para modelos ML:
 Cada función recibe SparkSession + rutas. Mismo código local y Databricks.
 """
 
-from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
-from pyspark.sql import Window
-
 
 # ========================================================
 # 1. USER STATS

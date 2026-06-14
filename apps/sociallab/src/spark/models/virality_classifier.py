@@ -10,15 +10,15 @@ Label: is_viral (0/1) — 1 si likes > percentil 90
 Modelo: LogisticRegression + RandomForest.
 """
 
-from pyspark.sql import SparkSession
-from pyspark.ml.feature import VectorAssembler, StandardScaler
+from pyspark.ml import Pipeline
 from pyspark.ml.classification import LogisticRegression, RandomForestClassifier
 from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClassificationEvaluator
-from pyspark.ml import Pipeline
+from pyspark.ml.feature import StandardScaler, VectorAssembler
+from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-from src.config import SILVER_PATH, GOLD_PATH
 from infra.shared.spark import build_spark
+from src.config import GOLD_PATH, SILVER_PATH
 from src.spark.models.engagement_predictor import build_features
 
 MODEL_NAME = "virality_classifier"
@@ -48,7 +48,7 @@ def train(spark: SparkSession = None, silver_path: str = None,
     output_path = output_path or str(GOLD_PATH / "models" / MODEL_NAME)
 
     print(f"{'='*60}")
-    print(f"VIRALITY CLASSIFIER — Training")
+    print("VIRALITY CLASSIFIER — Training")
     print(f"{'='*60}")
 
     # Build features (reuse from engagement)
@@ -100,7 +100,7 @@ def train(spark: SparkSession = None, silver_path: str = None,
         "test_size": test_df.count(),
     }
 
-    print(f"\nResults:")
+    print("\nResults:")
     for k, v in metrics.items():
         print(f"  {k}: {v}")
 
@@ -108,7 +108,7 @@ def train(spark: SparkSession = None, silver_path: str = None,
     lr_model = model.stages[-1]
     coeffs = list(zip(FEATURE_COLS, lr_model.coefficients.toArray()))
     coeffs.sort(key=lambda x: abs(x[1]), reverse=True)
-    print(f"\nCoefficients:")
+    print("\nCoefficients:")
     for feat, coef in coeffs:
         print(f"  {feat}: {coef:.4f}")
 
