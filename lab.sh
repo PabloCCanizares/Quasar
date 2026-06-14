@@ -578,6 +578,19 @@ preprolab_cmd() {
             ok "Seed completado. Datos en infra/data/preprolab/raw/"
             ;;
 
+        cloud)
+            local cloud_env="$DIR/apps/preprolab/.env.cloud"
+            if [[ ! -f "$cloud_env" ]]; then
+                err "Falta apps/preprolab/.env.cloud. Copia la plantilla y rellena las URIs:"
+                echo "  cp apps/preprolab/.env.cloud.example apps/preprolab/.env.cloud"
+                exit 1
+            fi
+            ensure_docker
+            log "Arrancando PreproLab contra MongoDB cloud..."
+            compose up -d --build "$PREPROLAB_SERVICE"
+            ok "Web: http://localhost:8002"
+            ;;
+
         etl|train)
             warn "Comando '$cmd' aun no implementado en Fase $([ "$cmd" = "etl" ] && echo "3+" || echo "futura")."
             echo "  Se a\xc3\xb1adira segun avance el roadmap del Tema 5."
@@ -597,6 +610,82 @@ preprolab_cmd() {
 }
 
 # ==========================================================
+# Comandos globales (afectan a varias apps)
+# ==========================================================
+
+quasar_tour() {
+    # Arranca el ecosistema completo + genera datos: demo en 1 comando.
+    ensure_docker
+    log "============================================================"
+    log "  QUASAR TOUR — arrancando el ecosistema completo"
+    log "============================================================"
+    echo
+
+    log "[1/4] Arrancando mongo + neo4j + las apps..."
+    compose up -d --build mongodb neo4j app-sociallab app-preprolab
+    echo
+
+    log "[2/4] Esperando a que mongo y neo4j esten healthy..."
+    local tries=0
+    while (( tries < 24 )); do
+        local m n
+        m=$(docker inspect quasar-mongo --format='{{.State.Health.Status}}' 2>/dev/null || echo none)
+        n=$(docker inspect quasar-neo4j --format='{{.State.Health.Status}}' 2>/dev/null || echo none)
+        if [[ "$m" == "healthy" && "$n" == "healthy" ]]; then
+            ok "mongo + neo4j healthy"
+            break
+        fi
+        sleep 5
+        ((tries++))
+    done
+    echo
+
+    log "[3/4] Seed + ETL de SocialLab (red social poliglota)..."
+    compose exec -T app-sociallab python -m src.seed.generate_dirty_data || warn "seed sociallab fallo"
+    compose exec -T app-sociallab python -m src.spark.run_pipeline --all || warn "etl sociallab fallo"
+    echo
+
+    log "[4/4] Seed de PreproLab (flota de robots)..."
+    compose exec -T app-preprolab python -m src.seed.generate_robot_fleet || warn "seed preprolab fallo"
+    echo
+
+    ok "============================================================"
+    ok "  Ecosistema Quasar arriba:"
+    ok "    SocialLab:     http://localhost:8000"
+    ok "    PreproLab:     http://localhost:8002  (Pipeline Studio ★)"
+    ok "    Neo4j browser: http://localhost:7474  (neo4j / neo4jneo4j)"
+    ok "============================================================"
+}
+
+quasar_all_solutions() {
+    ensure_docker
+    log "Desbloqueando TODOS los bloques de TODAS las apps..."
+    update_flag LAB_NEO4J all "" > /dev/null
+    update_flag LAB_ML all "" > /dev/null
+    update_flag_preprolab all "" > /dev/null
+    ok "LAB_NEO4J=all, LAB_ML=all, LAB_PREPROLAB=all"
+    compose up -d app-sociallab app-preprolab
+    ok "Apps reiniciadas con todas las soluciones activas."
+}
+
+quasar_all_exercises() {
+    ensure_docker
+    log "Bloqueando TODOS los bloques de TODAS las apps (modo alumno)..."
+    update_flag LAB_NEO4J none "" > /dev/null
+    update_flag LAB_ML none "" > /dev/null
+    update_flag_preprolab none "" > /dev/null
+    ok "Todos los flags vacios — todo en modo ejercicio (scaffold)."
+    compose up -d app-sociallab app-preprolab
+    ok "Apps reiniciadas en modo ejercicio."
+}
+
+quasar_down_all() {
+    ensure_docker
+    log "Parando TODO el ecosistema (volumenes preservados)..."
+    compose down
+}
+
+# ==========================================================
 # Top-level routing
 # ==========================================================
 
@@ -605,17 +694,25 @@ quasar_usage() {
 Quasar — laboratorio Big Data + IA (multi-app).
 
 Uso:    ./lab.sh <app> <comando> [args]
+        ./lab.sh <comando-global>
 
 Apps disponibles:
     sociallab    Red social poliglota (Twitter + MongoDB + Neo4j + Spark ML)
                  33 ejercicios en 3 bloques Cypher + 3 bloques ML.
-    preprolab    Preprocesamiento clasico (Tema 5) — Fase 1 esqueleto
-                 8 bloques planificados, en construccion progresiva.
+    preprolab    Preprocesamiento clasico (Tema 5) — COMPLETO
+                 8 bloques + Pipeline Studio. ~46 ejercicios.
 
 Apps planificadas (proximamente):
     llmprep      Limpieza de corpus + nanoGPT (Fase posterior del roadmap).
 
-Comandos comunes (varian por app):
+Comandos globales (afectan a TODAS las apps):
+    tour                         Arranca el ecosistema completo + seed + ETL.
+                                 Demo en 1 comando (~2-3 min).
+    all-solutions                Desbloquea todos los bloques de todas las apps.
+    all-exercises                Bloquea todo (modo alumno) en todas las apps.
+    down-all                     Para todo el ecosistema.
+
+Comandos por app (varian):
     up [exercises|solutions]    Arranca la app
     down                        Para los contenedores
     seed                        Genera datos
@@ -623,16 +720,18 @@ Comandos comunes (varian por app):
     train                       Entrena modelos ML
     status                      Estado actual
     unlock / lock <kind> <bloque>  Gestiona ejercicios
+    cloud                       Arranca contra Atlas/Aura
     reset                       Borra todos los datos
 
 Ayuda especifica:
     ./lab.sh sociallab help
+    ./lab.sh preprolab help
 
 Ejemplos:
+    ./lab.sh tour                         # todo el ecosistema en 1 comando
     ./lab.sh sociallab up exercises
-    ./lab.sh sociallab seed
-    ./lab.sh sociallab etl
-    ./lab.sh sociallab unlock neo4j basic
+    ./lab.sh preprolab seed
+    ./lab.sh all-solutions                # destapa todo para una demo
 EOF
 }
 
@@ -650,6 +749,18 @@ case "$app" in
         warn "La app 'llmprep' aun no esta implementada."
         echo "  Esta planificada para una fase posterior del roadmap de Quasar."
         exit 1
+        ;;
+    tour)
+        quasar_tour
+        ;;
+    all-solutions)
+        quasar_all_solutions
+        ;;
+    all-exercises)
+        quasar_all_exercises
+        ;;
+    down-all)
+        quasar_down_all
         ;;
     help|--help|-h|"")
         quasar_usage

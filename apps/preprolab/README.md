@@ -1,12 +1,13 @@
 # PreproLab
 
 > Una app del ecosistema [**Quasar**](../../README.md). Ver el README de la raíz para la visión global.
+> Apps hermanas: [SocialLab](../sociallab/README.md) (bases poliglotas + grafo).
 
 **Laboratorio dedicado al Tema 5 del temario — Preprocesamiento clásico con Spark.**
 
 PreproLab implementa todas las técnicas del temario sobre un dataset sintético construido a propósito: una **flota de robots autónomos con mantenimiento predictivo**. El escenario incluye intencionadamente los 10 tipos de problemas que el alumno tiene que resolver: valores perdidos (MCAR/MAR/MNAR), outliers de tres tipos, class noise, duplicados, fechas en formatos múltiples, encoding roto, multivaluadas, redundancia entre atributos, etc.
 
-## Estado actual: Fase 7 (bloque transform operativo)
+## Estado actual: COMPLETA (8 bloques + Pipeline Studio)
 
 Dataset generado, EDA + missing + outliers + integration + transform funcionales. Los bloques restantes se irán implementando en fases siguientes.
 
