@@ -4,7 +4,7 @@ const BLOCK_INFO = {
     clean:    { label: "1 · Clean",    desc: "Normalización Unicode, fix encoding, HTML strip, filtro de longitud, idioma, PII.", render: renderClean },
     dedup:    { label: "2 · Dedup",    desc: "Near-duplicates con MinHash/LSH + grafo SIMILAR_TO en Neo4j.", render: renderDedup },
     tokenize: { label: "3 · Tokenize", desc: "Tokenizer BPE + shards .bin estilo nanoGPT.", render: renderTokenize },
-    train:    { label: "4 · Train",    desc: "nanoGPT + comparativa corpus sucio vs limpio." },
+    train:    { label: "4 · Train ★",  desc: "Modelo de lenguaje + comparativa corpus sucio vs limpio.", render: renderTrain },
 };
 
 let LAB_STATUS = null;
@@ -287,6 +287,109 @@ async function runTok(technique, exercise, method, mergesId) {
     }
     if (data.note) html += `<p class="muted" style="margin-top:8px"><em>${data.note}</em></p>`;
     el.innerHTML = html;
+}
+
+// ============================================================
+// Bloque TRAIN
+// ============================================================
+
+async function renderTrain() {
+    const unlocked = (LAB_STATUS.blocks || {}).train;
+    document.getElementById("content").innerHTML = `
+        <h1>4 · Train ★ — modelo de lenguaje</h1>
+        <p class="muted">Estado: ${unlocked ? "<strong>resuelto</strong>" : "<strong>scaffold</strong>"}. Entrena un modelo de lenguaje sobre el corpus y comprueba el impacto de la limpieza. <strong>TRAIN-3 es la demo culminante de LLM Lab.</strong></p>
+
+        <section class="card">
+            <h2>TRAIN-1 · Entrenar + TRAIN-2 · Generar</h2>
+            <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
+                <button class="tbtn" onclick="runTrain('train','TRAIN-1','GET')">TRAIN-1 · train</button>
+                <label>prompt: <input type="text" id="train-prompt" value="la fotosíntesis" style="width:160px"></label>
+                <label>temp: <input type="number" id="train-temp" value="0.8" step="0.1" min="0.1" max="2" style="width:60px"></label>
+                <button class="tbtn" onclick="runTrain('generate','TRAIN-2','GET')">TRAIN-2 · generate</button>
+            </div>
+            <div id="train-result"></div>
+        </section>
+
+        <section class="card" style="border-color:#7c3aed">
+            <h2>TRAIN-3 ★ · Demo: corpus sucio vs limpio</h2>
+            <p class="muted">Entrena dos modelos idénticos —uno sobre el corpus crudo, otro sobre el limpio— y compara perplexity + generación. Tarda ~5-10s.</p>
+            <div class="row">
+                <label>prompt: <input type="text" id="cmp-prompt" value="la" style="width:120px"></label>
+                <button class="tbtn" style="background:#7c3aed;color:#fff;border-color:#7c3aed" onclick="runCompareTrain()">▶ Ejecutar comparativa</button>
+            </div>
+            <div id="train-compare"></div>
+        </section>
+    `;
+}
+
+async function runTrain(technique, exercise, method) {
+    const el = document.getElementById("train-result");
+    el.innerHTML = "<p class='loading'>procesando...</p>";
+    let url = `/api/llmprep/train/${technique}`;
+    if (technique === "generate") {
+        const p = encodeURIComponent(document.getElementById("train-prompt").value);
+        const t = document.getElementById("train-temp").value;
+        url += `?prompt=${p}&temperature=${t}`;
+    }
+    const data = await (await fetch(url, { method })).json();
+    if (data.error === "scaffold") {
+        el.innerHTML = `<div class="placeholder" style="text-align:left">
+            <p><strong style="color:#fbbf24">Ejercicio ${data.exercise} sin resolver.</strong></p>
+            <p class="muted">${data.hint}</p>
+            <p class="muted">Implementa en <code>apps/llmprep/src/web/routes/train_ex.py</code>.</p>
+        </div>`;
+        return;
+    }
+    if (data.error) { el.innerHTML = `<p class="error">${data.detail || data.error}</p>`; return; }
+
+    if (technique === "generate") {
+        el.innerHTML = `
+            <h3 style="margin-top:14px">Generación (prompt: "${data.prompt}", temp ${data.temperature})</h3>
+            <div style="background:#14101f;padding:14px;border-radius:8px;color:#d7d0e6;line-height:1.6">${data.generated}</div>`;
+        return;
+    }
+    // train
+    let html = `<h3 style="margin-top:14px">${data.model}</h3><table class='kv stats-table'>`;
+    Object.entries(data).forEach(([k, v]) => {
+        if (["technique","note","model"].includes(k)) return;
+        html += `<tr><th>${k}</th><td>${typeof v === "number" ? v.toLocaleString() : v}</td></tr>`;
+    });
+    html += "</table>";
+    if (data.note) html += `<p class="muted" style="margin-top:8px"><em>${data.note}</em></p>`;
+    el.innerHTML = html;
+}
+
+async function runCompareTrain() {
+    const el = document.getElementById("train-compare");
+    el.innerHTML = "<p class='loading'>entrenando 2 modelos (sucio + limpio)...</p>";
+    const p = encodeURIComponent(document.getElementById("cmp-prompt").value);
+    const data = await (await fetch(`/api/llmprep/train/compare?prompt=${p}`)).json();
+    if (data.error === "scaffold") {
+        el.innerHTML = `<div class="placeholder" style="text-align:left">
+            <p><strong style="color:#fbbf24">Ejercicio ${data.exercise} sin resolver.</strong></p>
+            <p class="muted">${data.hint}</p>
+        </div>`;
+        return;
+    }
+    if (data.error) { el.innerHTML = `<p class="error">${data.detail || data.error}</p>`; return; }
+
+    const d = data.dirty, c = data.clean;
+    el.innerHTML = `
+        <div style="display:flex;gap:16px;margin-top:14px;flex-wrap:wrap">
+            <div style="flex:1;min-width:280px;background:#2a1620;border:1px solid #5a2a3a;border-radius:10px;padding:16px">
+                <h3 style="color:#f87171">Corpus SUCIO</h3>
+                <p class="muted">vocab: ${d.vocab_size.toLocaleString()} · perplexity: <strong style="color:#f87171;font-size:18px">${d.perplexity}</strong></p>
+                <div style="background:#14101f;padding:10px;border-radius:6px;margin-top:8px;font-size:13px;line-height:1.5">${d.generated}</div>
+            </div>
+            <div style="flex:1;min-width:280px;background:#142a1f;border:1px solid #2a5a3a;border-radius:10px;padding:16px">
+                <h3 style="color:#34d399">Corpus LIMPIO</h3>
+                <p class="muted">vocab: ${c.vocab_size.toLocaleString()} · perplexity: <strong style="color:#34d399;font-size:18px">${c.perplexity}</strong></p>
+                <div style="background:#14101f;padding:10px;border-radius:6px;margin-top:8px;font-size:13px;line-height:1.5">${c.generated}</div>
+            </div>
+        </div>
+        <p style="margin-top:14px;text-align:center;font-size:16px">Mejora de perplexity con limpieza: <strong style="color:#a78bfa">${data.perplexity_improvement_pct}%</strong></p>
+        <div class="placeholder" style="text-align:left;margin-top:12px"><p class="muted"><em>${data.conclusion}</em></p></div>
+    `;
 }
 
 (async function init() {
