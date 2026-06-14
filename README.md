@@ -155,6 +155,21 @@ Todas las apps siguen la misma mecánica:
 
 Esto permite distribuir el repo en modo ejercicio (todo scaffold) y que el profesor vaya destapando bloques al ritmo del curso.
 
+## Tests y CI
+
+Los módulos puros (sin Docker/DB/Spark) tienen tests con pytest:
+
+```bash
+pip install -r requirements-test.txt
+python -m pytest tests/ -v
+```
+
+Cubren el tokenizer BPE y el modelo n-gram de LLM Lab, y la config compartida. El workflow de GitHub Actions (`.github/workflows/ci.yml`) corre en cada push/PR a `main`:
+
+- **tests**: pytest sobre los módulos puros.
+- **lint**: `ruff check` (informativo, no bloqueante).
+- **smoke-build**: construye las imágenes Docker de las 3 apps.
+
 ## Comandos `lab.sh` (referencia rápida)
 
 ```bash

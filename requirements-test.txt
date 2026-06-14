@@ -1,0 +1,4 @@
+# Dependencias para correr los tests puros de Quasar (sin Docker/Spark/DB).
+pytest==8.*
+python-dotenv==1.1.*
+numpy==1.26.*
