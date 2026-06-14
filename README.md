@@ -42,15 +42,16 @@ No es Jupyter, no es Streamlit, no es un boilerplate genérico. Es una **platafo
 
 ## Apps del ecosistema
 
-Las **tres apps están completas** y operativas:
+**El [Quasar Hub](apps/hub/) (`:8080`) es la puerta de entrada**: landing explicativa, estado agregado de las 3 apps en vivo, panel de configuración del profesor (desbloquear/bloquear bloques desde la web) y guía de primeros pasos. Es el único puerto que necesitas conocer.
 
-| App | Estado | Puerto | Tema docente | Bloques | Ejercicios |
-|---|---|---|---|---|---|
-| [**SocialLab**](apps/sociallab/README.md) | **Completa** | `:8000` | Bases poliglotas + Spark ML | 3 Cypher (basic/intermediate/advanced) + 3 ML (supervised/unsupervised/graph_ml) | 33 |
-| [**PreproLab**](apps/preprolab/README.md) | **Completa** | `:8002` | Tema 5 — Preprocesamiento | 8 bloques (eda, missing, outliers, integration, transform, normalize, reduce_dim, reduce_inst) **+ Pipeline Studio** | 46 |
-| [**LLM Lab**](apps/llmprep/README.md) | **Completa** | `:8001` | NLP / LLMs | ingest + 4 bloques (clean, dedup, tokenize, train) | 18 |
+| App | Estado | Puerto | Rol |
+|---|---|---|---|
+| [**Quasar Hub**](apps/hub/) | **Completa** | `:8080` | Puerta de entrada: explica, navega, configura, onboarding |
+| [**SocialLab**](apps/sociallab/README.md) | **Completa** | `:8000` | Bases poliglotas + Spark ML — 33 ejercicios |
+| [**PreproLab**](apps/preprolab/README.md) | **Completa** | `:8002` | Tema 5 — Preprocesamiento + Pipeline Studio — 46 ejercicios |
+| [**LLM Lab**](apps/llmprep/README.md) | **Completa** | `:8001` | NLP / corpus para LLMs — 18 ejercicios |
 
-Cada app tiene su propio README con la lista detallada de ejercicios y casos empresariales que cubren. **~97 ejercicios** scaffold/solución en total a lo largo del curso.
+Cada app tiene su propio README con la lista detallada de ejercicios. **~97 ejercicios** scaffold/solución en total a lo largo del curso.
 
 ### Comandos globales (afectan a todo el ecosistema)
 

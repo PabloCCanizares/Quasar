@@ -1,0 +1,13 @@
+# Web
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+
+# Cliente HTTP para consultar el estado de las otras 3 apps
+httpx==0.28.*
+
+# Control de contenedores (reinicio tras cambiar flags)
+docker==7.1.*
+
+# Config
+python-dotenv==1.1.*
+pydantic==2.11.*

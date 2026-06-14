@@ -72,10 +72,13 @@ services:
       # Específico de SocialLab — sobreescribe defaults del .env.docker.
       WEB_PORT: "8000"
       MONGO_DB: sociallab
+      # Archivo de flags que el Hub edita; la app lo lee en cada arranque.
+      QUASAR_ENV_FILE: /app/.env.docker
     volumes:
       - ../../infra/data/sociallab:/app/data
       - ../../apps/sociallab/src:/app/src
       - ../../infra/shared:/app/infra/shared
+      - ./.env.docker:/app/.env.docker:ro
       - spark_ivy:/root/.ivy2
     depends_on:
       mongodb:
@@ -98,10 +101,12 @@ services:
       # Específico de PreproLab — sobreescribe defaults del .env.docker.
       WEB_PORT: "8002"
       MONGO_DB: preprolab
+      QUASAR_ENV_FILE: /app/.env.docker
     volumes:
       - ../../infra/data/preprolab:/app/data
       - ../../apps/preprolab/src:/app/src
       - ../../infra/shared:/app/infra/shared
+      - ./.env.docker:/app/.env.docker:ro
       - spark_ivy:/root/.ivy2
     depends_on:
       mongodb:
@@ -124,16 +129,40 @@ services:
       # Específico de LLM Lab — sobreescribe defaults del .env.docker.
       WEB_PORT: "8001"
       MONGO_DB: llmprep
+      QUASAR_ENV_FILE: /app/.env.docker
     volumes:
       - ../../infra/data/llmprep:/app/data
       - ../../apps/llmprep/src:/app/src
       - ../../infra/shared:/app/infra/shared
+      - ./.env.docker:/app/.env.docker:ro
       - spark_ivy:/root/.ivy2
     depends_on:
       mongodb:
         condition: service_healthy
       neo4j:
         condition: service_healthy
+    restart: unless-stopped
+
+  app-hub:
+    build:
+      context: ../..
+      dockerfile: apps/hub/Dockerfile
+    container_name: quasar-hub
+    hostname: app-hub
+    ports:
+      - "8080:8080"
+    environment:
+      WEB_PORT: "8080"
+      # El .env.docker que el Hub edita (rw) para cambiar flags.
+      QUASAR_ENV_FILE: /quasar/.env.docker
+    volumes:
+      - ../../apps/hub/src:/app/src
+      - ../../infra/shared:/app/infra/shared
+      # .env.docker editable (rw, a diferencia de las apps que lo montan ro).
+      - ./.env.docker:/quasar/.env.docker
+      # Docker socket para reiniciar los contenedores de las apps tras
+      # cambiar un flag desde el panel del profesor.
+      - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 
 volumes:
