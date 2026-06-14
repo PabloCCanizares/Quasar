@@ -34,6 +34,34 @@ body {
     border-radius: 6px;
 }
 
+.app-switcher {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: auto;
+    margin-right: 16px;
+}
+.app-switcher a, .app-switcher .current {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.app-switcher a {
+    color: #71767b;
+    border: 1px solid #2f3336;
+}
+.app-switcher a:hover {
+    color: #1d9bf0;
+    border-color: #1d9bf0;
+}
+.app-switcher .current {
+    color: #fff;
+    background: #1d9bf0;
+    font-weight: 600;
+}
+
 #app {
     flex: 1;
     display: flex;

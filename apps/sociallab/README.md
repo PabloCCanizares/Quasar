@@ -1,6 +1,7 @@
 # SocialLab
 
 > Una app del ecosistema [**Quasar**](../../README.md). Ver el README de la raíz para la visión global.
+> Apps hermanas: [PreproLab](../preprolab/README.md) (Tema 5 — preprocesamiento + Pipeline Studio).
 
 **Laboratorio Big Data para aprender bases de datos poliglotas con Spark, MongoDB, Neo4j y Machine Learning.**
 

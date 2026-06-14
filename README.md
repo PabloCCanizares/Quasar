@@ -45,10 +45,21 @@ No es Jupyter, no es Streamlit, no es un boilerplate genérico. Es una **platafo
 | App | Estado | Puerto | Tema docente | Bloques | Ejercicios |
 |---|---|---|---|---|---|
 | [**SocialLab**](apps/sociallab/README.md) | Operativa | `:8000` | Bases poliglotas + Spark ML | 3 Cypher (basic/intermediate/advanced) + 3 ML (supervised/unsupervised/graph_ml) | 33 |
-| [**PreproLab**](apps/preprolab/README.md) | Fase 1 — esqueleto | `:8002` | Tema 5 — Preprocesamiento | 8 (eda, missing, outliers, integration, transform, normalize, reduce_dim, reduce_inst) | ~30 previstos |
+| [**PreproLab**](apps/preprolab/README.md) | **Completa** | `:8002` | Tema 5 — Preprocesamiento | 8 bloques (eda, missing, outliers, integration, transform, normalize, reduce_dim, reduce_inst) **+ Pipeline Studio** | 46 |
 | **LLM Lab** | Planificada | `:8001` | NLP / LLMs | clean, dedup, tokenize, train | ~15 previstos |
 
 Cada app tiene su propio README con la lista detallada de ejercicios y casos empresariales que cubren.
+
+### Comandos globales (afectan a todo el ecosistema)
+
+```bash
+./lab.sh tour            # arranca todo + seed + ETL: demo en 1 comando (~2-3 min)
+./lab.sh all-solutions   # destapa todos los bloques de todas las apps (demo profesor)
+./lab.sh all-exercises   # bloquea todo (modo alumno por defecto)
+./lab.sh down-all        # para todo el ecosistema
+```
+
+Las dos webs se enlazan entre sí: hay un selector de apps en la cabecera de cada una.
 
 ## Arranque rápido
 
