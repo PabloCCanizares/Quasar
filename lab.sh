@@ -754,6 +754,54 @@ llmprep_cmd() {
 }
 
 # ==========================================================
+# Quasar Hub (app central :8080)
+# ==========================================================
+
+hub_cmd() {
+    local cmd="${1:-help}"
+    shift || true
+    case "$cmd" in
+        up)
+            ensure_docker
+            log "Arrancando el Quasar Hub..."
+            compose up -d --build app-hub
+            ok "Hub: http://localhost:8080  (puerta de entrada del ecosistema)"
+            ;;
+        down|stop)
+            ensure_docker
+            compose stop app-hub
+            ;;
+        restart)
+            ensure_docker
+            compose up -d app-hub
+            ;;
+        logs)
+            ensure_docker
+            compose logs -f app-hub
+            ;;
+        help|--help|-h|"")
+            cat <<EOF
+Quasar Hub — app central del ecosistema (:8080)
+
+    up          Arranca el Hub.
+    down        Para el Hub.
+    restart     Reinicia el Hub.
+    logs        Sigue logs del Hub.
+
+El Hub es la puerta de entrada: landing explicativa, estado agregado de
+las 3 apps, panel de configuración (desbloquear/bloquear bloques desde la
+web) y guía de primeros pasos.
+
+Web: http://localhost:8080
+EOF
+            ;;
+        *)
+            err "Comando desconocido: $cmd"; exit 1
+            ;;
+    esac
+}
+
+# ==========================================================
 # Comandos globales (afectan a varias apps)
 # ==========================================================
 
@@ -765,8 +813,8 @@ quasar_tour() {
     log "============================================================"
     echo
 
-    log "[1/4] Arrancando mongo + neo4j + las apps..."
-    compose up -d --build mongodb neo4j app-sociallab app-preprolab app-llmprep
+    log "[1/4] Arrancando mongo + neo4j + las apps + el Hub..."
+    compose up -d --build mongodb neo4j app-hub app-sociallab app-preprolab app-llmprep
     echo
 
     log "[2/4] Esperando a que mongo y neo4j esten healthy..."
@@ -795,6 +843,7 @@ quasar_tour() {
 
     ok "============================================================"
     ok "  Ecosistema Quasar arriba:"
+    ok "    ★ Hub:         http://localhost:8080  (EMPIEZA AQUÍ)"
     ok "    SocialLab:     http://localhost:8000"
     ok "    LLM Lab:       http://localhost:8001"
     ok "    PreproLab:     http://localhost:8002  (Pipeline Studio ★)"
@@ -894,6 +943,9 @@ case "$app" in
         ;;
     llmprep)
         llmprep_cmd "$@"
+        ;;
+    hub)
+        hub_cmd "$@"
         ;;
     tour)
         quasar_tour

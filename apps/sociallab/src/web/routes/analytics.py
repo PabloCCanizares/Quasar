@@ -16,15 +16,15 @@ los parquets de modelos entrenados, asi que su disponibilidad la determina
 si el alumno ha completado y ejecutado el correspondiente _ex.py.
 """
 
-import os
-
 from fastapi import APIRouter
+
+from infra.shared.lab_flags import read_lab_flag
 
 router = APIRouter()
 
 
 def _unlocked(env_var: str) -> set[str]:
-    raw = os.getenv(env_var, "").strip().lower()
+    raw = read_lab_flag(env_var).strip().lower()
     if not raw:
         return set()
     if raw == "all":

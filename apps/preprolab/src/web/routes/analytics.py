@@ -36,7 +36,8 @@ BLOCKS = [
 
 
 def _unlocked() -> set[str]:
-    raw = os.getenv("LAB_PREPROLAB", "").strip().lower()
+    from infra.shared.lab_flags import read_lab_flag
+    raw = read_lab_flag("LAB_PREPROLAB").strip().lower()
     if not raw:
         return set()
     if raw == "all":

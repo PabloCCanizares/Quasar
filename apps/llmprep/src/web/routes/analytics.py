@@ -21,7 +21,8 @@ BLOCKS = ["clean", "dedup", "tokenize", "train"]
 
 
 def _unlocked() -> set[str]:
-    raw = os.getenv("LAB_LLMPREP", "").strip().lower()
+    from infra.shared.lab_flags import read_lab_flag
+    raw = read_lab_flag("LAB_LLMPREP").strip().lower()
     if not raw:
         return set()
     if raw == "all":

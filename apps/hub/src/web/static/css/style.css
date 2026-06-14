@@ -1,0 +1,144 @@
+/* Quasar Hub - tema cósmico (azul profundo + cian, distinto de las 3 apps) */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(ellipse at top, #0a1228 0%, #05080f 70%);
+    color: #e7eef7;
+    min-height: 100vh;
+}
+
+.topbar {
+    background: rgba(10, 18, 40, 0.85);
+    border-bottom: 1px solid #1a2744;
+    padding: 14px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(8px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand .logo { color: #38bdf8; font-size: 22px; text-shadow: 0 0 12px rgba(56,189,248,0.7); }
+.brand strong { font-size: 20px; letter-spacing: 3px; color: #fff; }
+.brand .subtitle { color: #5d7290; font-size: 13px; margin-left: 6px; }
+
+.tabs { display: flex; gap: 4px; }
+.tab {
+    background: transparent; color: #8da4c4; border: none;
+    padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 14px;
+    transition: all 0.15s;
+}
+.tab:hover { color: #e7eef7; background: rgba(56,189,248,0.08); }
+.tab.active { color: #fff; background: #0e7490; }
+
+#content { max-width: 1100px; margin: 0 auto; padding: 36px 32px 60px; }
+.loading { color: #5d7290; font-style: italic; }
+.muted { color: #5d7290; }
+.error { color: #f87171; background: #2a1620; padding: 8px 12px; border-radius: 6px; }
+
+h1 { font-size: 28px; margin-bottom: 10px; color: #fff; }
+h2 { font-size: 19px; margin: 4px 0 14px; color: #fff; }
+h3 { font-size: 15px; margin-bottom: 8px; color: #b8c9e0; }
+code {
+    background: #0a1228; padding: 2px 7px; border-radius: 4px;
+    font-family: "SF Mono", Consolas, monospace; font-size: 13px; color: #fbbf24;
+}
+
+/* ---- Home / landing ---- */
+.hero { text-align: center; padding: 20px 0 36px; }
+.hero h1 { font-size: 36px; letter-spacing: 1px; }
+.hero p { color: #8da4c4; font-size: 17px; max-width: 680px; margin: 12px auto 0; line-height: 1.6; }
+
+.app-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 10px; }
+.app-card {
+    background: linear-gradient(160deg, #0d1730 0%, #0a1124 100%);
+    border: 1px solid #1a2744; border-radius: 16px; padding: 24px;
+    transition: all 0.2s; position: relative; overflow: hidden;
+}
+.app-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+.app-card .accent-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--accent); }
+.app-card h2 { color: var(--accent); }
+.app-card .tagline { color: #8da4c4; font-size: 13px; margin-bottom: 12px; }
+.app-card p { color: #b8c9e0; font-size: 14px; line-height: 1.5; margin-bottom: 18px; }
+.app-card .card-foot { display: flex; justify-content: space-between; align-items: center; }
+.app-card .port { color: #5d7290; font-family: monospace; font-size: 13px; }
+.app-card a.open-btn {
+    background: var(--accent); color: #051018; text-decoration: none;
+    padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 14px;
+}
+.status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+.dot-online { background: #34d399; box-shadow: 0 0 8px rgba(52,211,153,0.7); }
+.dot-offline { background: #64748b; }
+
+/* ---- Stats summary ---- */
+.summary-row { display: flex; gap: 16px; margin: 20px 0 28px; flex-wrap: wrap; }
+.stat-box {
+    background: #0d1730; border: 1px solid #1a2744; border-radius: 12px;
+    padding: 18px 24px; flex: 1; min-width: 160px; text-align: center;
+}
+.stat-box .num { font-size: 32px; font-weight: 700; color: #38bdf8; }
+.stat-box .lbl { color: #5d7290; font-size: 13px; margin-top: 4px; }
+
+/* ---- Status / config blocks ---- */
+.app-section {
+    background: #0d1730; border: 1px solid #1a2744; border-radius: 14px;
+    padding: 22px 26px; margin-bottom: 18px;
+}
+.app-section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.app-section-head h2 { margin: 0; }
+.blocks-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.block-chip {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px; border-radius: 8px; font-size: 13px;
+    border: 1px solid #1a2744; background: #0a1228;
+}
+.block-chip .bdot { width: 8px; height: 8px; border-radius: 50%; }
+.block-chip.unlocked { border-color: #166534; }
+.block-chip.unlocked .bdot { background: #34d399; }
+.block-chip.locked .bdot { background: #64748b; }
+
+/* toggle button in config */
+.toggle-btn {
+    background: #0a1228; border: 1px solid #1a2744; color: #b8c9e0;
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; gap: 8px; transition: all 0.15s;
+}
+.toggle-btn:hover { border-color: #38bdf8; }
+.toggle-btn.is-unlocked { background: #064e3b; border-color: #166534; color: #d1fae5; }
+.toggle-btn .bdot { width: 8px; height: 8px; border-radius: 50%; }
+.toggle-btn.is-unlocked .bdot { background: #34d399; }
+.toggle-btn.is-locked .bdot { background: #64748b; }
+
+.config-actions { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+.action-btn {
+    background: #0e7490; color: #fff; border: none; padding: 10px 18px;
+    border-radius: 8px; cursor: pointer; font-size: 14px;
+}
+.action-btn.secondary { background: #1a2744; }
+.action-btn:hover { filter: brightness(1.15); }
+
+.toast {
+    position: fixed; bottom: 24px; right: 24px; background: #0e7490; color: #fff;
+    padding: 14px 20px; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+    font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200;
+}
+.toast.show { opacity: 1; }
+
+/* ---- Onboarding ---- */
+.step {
+    display: flex; gap: 18px; background: #0d1730; border: 1px solid #1a2744;
+    border-radius: 12px; padding: 20px 24px; margin-bottom: 14px;
+}
+.step .num {
+    flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%;
+    background: #0e7490; color: #fff; display: flex; align-items: center;
+    justify-content: center; font-weight: 700;
+}
+.step .body h3 { margin-bottom: 6px; color: #fff; }
+.step .body p { color: #b8c9e0; font-size: 14px; line-height: 1.5; }
+.step pre {
+    background: #05080f; padding: 10px 14px; border-radius: 8px; margin-top: 8px;
+    overflow-x: auto; font-family: "SF Mono", Consolas, monospace; font-size: 13px; color: #7dd3fc;
+}
