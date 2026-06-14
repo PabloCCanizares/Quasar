@@ -46,6 +46,13 @@ else:
     from src.web.routes import dedup_ex as _dedup
 router.include_router(_dedup.router)
 
+# --- Bloque tokenize ---
+if "tokenize" in _unlocked_blocks:
+    from src.web.routes import tokenize as _tokenize
+else:
+    from src.web.routes import tokenize_ex as _tokenize
+router.include_router(_tokenize.router)
+
 
 @router.get("/api/llmprep/lab/status")
 async def lab_status():
