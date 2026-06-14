@@ -159,14 +159,20 @@ services:
       PYTHONPATH: /app
       # El .env.docker que el Hub edita (rw) para cambiar flags.
       QUASAR_ENV_FILE: /quasar/.env.docker
+      # Data lake (ro) para comprobar si hay datos generados.
+      QUASAR_DATA_ROOT: /quasar/data
     volumes:
       - ../../apps/hub/src:/app/src
       - ../../infra/shared:/app/infra/shared
       # .env.docker editable (rw, a diferencia de las apps que lo montan ro).
       - ./.env.docker:/quasar/.env.docker
-      # Docker socket para reiniciar los contenedores de las apps tras
-      # cambiar un flag desde el panel del profesor.
+      # Data lake read-only para el estado de datos.
+      - ../../infra/data:/quasar/data:ro
+      # Docker socket para reiniciar contenedores y lanzar seed/etl.
       - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      mongodb:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
