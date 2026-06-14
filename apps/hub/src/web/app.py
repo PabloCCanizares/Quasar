@@ -16,8 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from src.config import APPS
-from src.web.routes import status, control
+from src.config import APPS, total_exercises
+from src.web.routes import status, control, infra
 
 WEB_DIR = Path(__file__).parent
 STATIC_DIR = WEB_DIR / "static"
@@ -38,6 +38,7 @@ app.add_middleware(
 
 app.include_router(status.router)
 app.include_router(control.router)
+app.include_router(infra.router)
 
 
 @app.get("/api/health")
@@ -47,8 +48,9 @@ async def health():
 
 @app.get("/api/hub/catalog")
 async def catalog():
-    """Catálogo estático de las apps (para la landing)."""
+    """Catálogo de las apps con bloques legibles, tags y enlaces."""
     return {
+        "total_exercises": total_exercises(),
         "apps": [
             {
                 "key": k,
@@ -57,10 +59,15 @@ async def catalog():
                 "description": m["description"],
                 "url_public": m["url_public"],
                 "color": m["color"],
-                "flags": m["flags"],
+                "tech": m.get("tech", []),
+                "docs": m.get("docs"),
+                "readme": m.get("readme"),
+                "tasks": m.get("tasks", {}),
+                "blocks": m["blocks"],
+                "exercises": sum(b["exercises"] for b in m["blocks"]),
             }
             for k, m in APPS.items()
-        ]
+        ],
     }
 
 

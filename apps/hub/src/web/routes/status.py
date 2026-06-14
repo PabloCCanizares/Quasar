@@ -27,8 +27,10 @@ async def _probe_app(key: str, meta: dict) -> dict:
         "description": meta["description"],
         "url_public": meta["url_public"],
         "color": meta["color"],
+        "tech": meta.get("tech", []),
+        "tasks": meta.get("tasks", {}),
         "online": False,
-        "blocks": {},
+        "blocks": [],
     }
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
@@ -38,13 +40,24 @@ async def _probe_app(key: str, meta: dict) -> dict:
                 status = await client.get(f"{base}{meta['status_path']}")
                 if status.status_code == 200:
                     data = status.json()
-                    result["blocks"] = data.get("blocks", {})
-                    # SocialLab anida neo4j/ml en lugar de un dict plano
+                    blocks = data.get("blocks", {})
+                    # SocialLab anida neo4j/ml — los aplanamos (no hay colisión de claves).
                     if "neo4j" in data or "ml" in data:
-                        merged = {}
-                        merged.update({f"neo4j:{k}": v for k, v in data.get("neo4j", {}).items()})
-                        merged.update({f"ml:{k}": v for k, v in data.get("ml", {}).items()})
-                        result["blocks"] = merged
+                        blocks = {}
+                        blocks.update(data.get("neo4j", {}))
+                        blocks.update(data.get("ml", {}))
+                    # Enriquecer con etiqueta + nº de ejercicios desde el catálogo.
+                    block_meta = {b["key"]: b for b in meta["blocks"]}
+                    result["blocks"] = [
+                        {
+                            "key": k,
+                            "unlocked": bool(v),
+                            "label": block_meta.get(k, {}).get("label", k),
+                            "desc": block_meta.get(k, {}).get("desc", ""),
+                            "exercises": block_meta.get(k, {}).get("exercises", 0),
+                        }
+                        for k, v in blocks.items()
+                    ]
     except Exception:
         result["online"] = False
     return result
@@ -55,7 +68,7 @@ async def ecosystem_status() -> dict:
     """Estado agregado de las 3 apps en una sola respuesta."""
     probes = await asyncio.gather(*[_probe_app(k, m) for k, m in APPS.items()])
     total_blocks = sum(len(p["blocks"]) for p in probes)
-    unlocked = sum(sum(1 for v in p["blocks"].values() if v) for p in probes)
+    unlocked = sum(sum(1 for b in p["blocks"] if b["unlocked"]) for p in probes)
     return {
         "apps": probes,
         "summary": {

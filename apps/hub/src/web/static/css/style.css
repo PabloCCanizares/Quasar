@@ -72,6 +72,51 @@ code {
 .dot-online { background: #34d399; box-shadow: 0 0 8px rgba(52,211,153,0.7); }
 .dot-offline { background: #64748b; }
 
+/* ---- Tags + infra strip ---- */
+.tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 16px; }
+.tag {
+    font-size: 11px; padding: 2px 9px; border-radius: 20px;
+    background: rgba(56,189,248,0.1); color: #7dd3fc; border: 1px solid #1a3a52;
+}
+.infra-strip {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin: 0 0 24px; padding: 12px 18px; background: #0a1228;
+    border: 1px solid #1a2744; border-radius: 12px;
+}
+.infra-chip {
+    display: flex; align-items: center; gap: 6px; font-size: 13px;
+    padding: 5px 12px; border-radius: 8px; border: 1px solid #1a2744;
+}
+.infra-chip.up { color: #d1fae5; }
+.infra-chip.down { color: #94a3b8; }
+.infra-summary { margin-left: auto; color: #5d7290; font-size: 13px; }
+
+/* ---- Data state + acciones ---- */
+.data-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.data-badge {
+    font-size: 12px; padding: 4px 10px; border-radius: 8px; border: 1px solid #1a2744;
+}
+.data-badge.ok { background: #064e3b; border-color: #166534; color: #d1fae5; }
+.data-badge.no { background: #1c1320; border-color: #3a2030; color: #c08a9a; }
+.task-btns { display: flex; gap: 6px; }
+.mini-btn {
+    background: #0e7490; color: #fff; border: none; padding: 5px 12px;
+    border-radius: 7px; cursor: pointer; font-size: 12px;
+}
+.mini-btn:hover { filter: brightness(1.15); }
+.mini-btn.ghost { background: transparent; border: 1px solid #1a2744; color: #8da4c4; }
+.mini-btn.ghost:hover { border-color: #38bdf8; color: #e7eef7; }
+.block-chip .ex, .toggle-btn .ex {
+    font-size: 10px; background: rgba(255,255,255,0.08); padding: 1px 6px;
+    border-radius: 10px; margin-left: 2px;
+}
+pre.flow {
+    background: #05080f; padding: 16px; border-radius: 10px; overflow-x: auto;
+    font-family: "SF Mono", Consolas, monospace; font-size: 12px; color: #7dd3fc; line-height: 1.5;
+}
+table.kv { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.kv td { padding: 8px 12px; border-bottom: 1px solid #1a2744; color: #b8c9e0; }
+
 /* ---- Stats summary ---- */
 .summary-row { display: flex; gap: 16px; margin: 20px 0 28px; flex-wrap: wrap; }
 .stat-box {
