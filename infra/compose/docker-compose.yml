@@ -110,6 +110,32 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  app-llmprep:
+    build:
+      context: ../..
+      dockerfile: apps/llmprep/Dockerfile
+    container_name: quasar-llmprep
+    hostname: app-llmprep
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env.docker
+    environment:
+      # Específico de LLM Lab — sobreescribe defaults del .env.docker.
+      WEB_PORT: "8001"
+      MONGO_DB: llmprep
+    volumes:
+      - ../../infra/data/llmprep:/app/data
+      - ../../apps/llmprep/src:/app/src
+      - ../../infra/shared:/app/infra/shared
+      - spark_ivy:/root/.ivy2
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   mongo_data:
   neo4j_data:

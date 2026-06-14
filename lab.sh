@@ -610,6 +610,143 @@ preprolab_cmd() {
 }
 
 # ==========================================================
+# LLM Lab
+# ==========================================================
+
+LLMPREP_SERVICE="app-llmprep"
+LLMPREP_VALID_BLOCKS=(clean dedup tokenize train)
+
+llmprep_restart_app() {
+    log "Recreando el contenedor '$LLMPREP_SERVICE' para recoger nuevos flags..."
+    compose up -d "$LLMPREP_SERVICE"
+    ok "Listo. Recarga http://localhost:8001"
+}
+
+update_flag_llmprep() {
+    local action="$1" block="$2"
+    python3 - "$action" "$block" "$ENV_FILE" <<'PYEOF'
+import re, sys
+action, block, env_file = sys.argv[1:4]
+ALL = {"clean", "dedup", "tokenize", "train"}
+with open(env_file) as f:
+    content = f.read()
+m = re.search(r'^LAB_LLMPREP=(.*)$', content, re.MULTILINE)
+current = m.group(1).strip() if m else ""
+blocks = set(ALL) if current == "all" else {b.strip() for b in current.split(",") if b.strip()}
+if action == "unlock":
+    if block not in ALL:
+        sys.stderr.write(f"Bloque desconocido: {block}. Validos: {sorted(ALL)}\n"); sys.exit(2)
+    blocks.add(block)
+elif action == "lock":
+    blocks.discard(block)
+elif action == "all":
+    blocks = set(ALL)
+elif action == "none":
+    blocks = set()
+else:
+    sys.stderr.write(f"Action desconocida: {action}\n"); sys.exit(2)
+new_value = ",".join(sorted(blocks))
+content = re.sub(r'^LAB_LLMPREP=.*$', f'LAB_LLMPREP={new_value}', content, flags=re.MULTILINE)
+with open(env_file, "w") as f:
+    f.write(content)
+print(new_value if new_value else "(empty)")
+PYEOF
+}
+
+llmprep_usage() {
+    cat <<EOF
+LLM Lab — comandos disponibles (Fase 12: esqueleto)
+
+Ciclo de vida:
+    up                          Arranca app-llmprep + dependencias.
+    down                         Para SOLO app-llmprep.
+    status                       Estado de los flags y servicios.
+    restart                      Reinicia el contenedor.
+    logs                         Sigue logs de app-llmprep.
+
+Modo laboratorio (flags en infra/compose/.env.docker):
+    unlock <bloque>             Desbloquea un bloque.
+    lock   <bloque>             Vuelve a esconderlo (scaffold).
+    solutions / exercises        Toggle masivo.
+  Bloques: clean | dedup | tokenize | train
+
+Pipeline (Fase 13+, en construccion):
+    ingest                       Descargara Wikipedia ES + inyectara ruido.
+    clean / tokenize / train     Bloques del pipeline.
+
+Web LLM Lab: http://localhost:8001
+EOF
+}
+
+llmprep_cmd() {
+    local cmd="${1:-help}"
+    shift || true
+    case "$cmd" in
+        up)
+            ensure_docker
+            log "Arrancando LLM Lab..."
+            compose up -d --build "$LLMPREP_SERVICE"
+            ok "Web: http://localhost:8001"
+            ;;
+        down|stop)
+            ensure_docker
+            log "Parando LLM Lab (mongo/neo4j siguen vivos)..."
+            compose stop "$LLMPREP_SERVICE"
+            ;;
+        restart)
+            ensure_docker
+            llmprep_restart_app
+            ;;
+        status)
+            echo
+            log "Estado del flag LAB_LLMPREP ($ENV_FILE):"
+            grep -E '^LAB_LLMPREP=' "$ENV_FILE" | sed 's/^/    /'
+            echo
+            ensure_docker
+            compose ps 2>/dev/null | sed 's/^/    /' || warn "Compose no esta corriendo"
+            echo
+            ;;
+        unlock)
+            local block="${1:-}"
+            if [[ -z "$block" ]]; then
+                err "Uso: ./lab.sh llmprep unlock <bloque>"
+                echo "  Bloques: ${LLMPREP_VALID_BLOCKS[*]}"; exit 1
+            fi
+            new=$(update_flag_llmprep unlock "$block"); ok "LAB_LLMPREP = $new"
+            ensure_docker; llmprep_restart_app
+            ;;
+        lock)
+            local block="${1:-}"
+            if [[ -z "$block" ]]; then err "Uso: ./lab.sh llmprep lock <bloque>"; exit 1; fi
+            new=$(update_flag_llmprep lock "$block"); ok "LAB_LLMPREP = $new"
+            ensure_docker; llmprep_restart_app
+            ;;
+        solutions)
+            update_flag_llmprep all "" > /dev/null; ok "Todo desbloqueado: LAB_LLMPREP=all"
+            ensure_docker; llmprep_restart_app
+            ;;
+        exercises)
+            update_flag_llmprep none "" > /dev/null; ok "Todo en modo ejercicio (scaffold)"
+            ensure_docker; llmprep_restart_app
+            ;;
+        logs)
+            ensure_docker; compose logs -f "$LLMPREP_SERVICE"
+            ;;
+        ingest|clean|tokenize|train)
+            warn "Comando '$cmd' aun no implementado en Fase 12 (esqueleto)."
+            echo "  Se a\xc3\xb1adira en las fases 13-17 del roadmap LLM Lab."
+            exit 1
+            ;;
+        help|--help|-h|"")
+            llmprep_usage
+            ;;
+        *)
+            err "Comando desconocido: $cmd"; llmprep_usage; exit 1
+            ;;
+    esac
+}
+
+# ==========================================================
 # Comandos globales (afectan a varias apps)
 # ==========================================================
 
@@ -622,7 +759,7 @@ quasar_tour() {
     echo
 
     log "[1/4] Arrancando mongo + neo4j + las apps..."
-    compose up -d --build mongodb neo4j app-sociallab app-preprolab
+    compose up -d --build mongodb neo4j app-sociallab app-preprolab app-llmprep
     echo
 
     log "[2/4] Esperando a que mongo y neo4j esten healthy..."
@@ -652,6 +789,7 @@ quasar_tour() {
     ok "============================================================"
     ok "  Ecosistema Quasar arriba:"
     ok "    SocialLab:     http://localhost:8000"
+    ok "    LLM Lab:       http://localhost:8001"
     ok "    PreproLab:     http://localhost:8002  (Pipeline Studio ★)"
     ok "    Neo4j browser: http://localhost:7474  (neo4j / neo4jneo4j)"
     ok "============================================================"
@@ -663,8 +801,9 @@ quasar_all_solutions() {
     update_flag LAB_NEO4J all "" > /dev/null
     update_flag LAB_ML all "" > /dev/null
     update_flag_preprolab all "" > /dev/null
-    ok "LAB_NEO4J=all, LAB_ML=all, LAB_PREPROLAB=all"
-    compose up -d app-sociallab app-preprolab
+    update_flag_llmprep all "" > /dev/null
+    ok "LAB_NEO4J=all, LAB_ML=all, LAB_PREPROLAB=all, LAB_LLMPREP=all"
+    compose up -d app-sociallab app-preprolab app-llmprep
     ok "Apps reiniciadas con todas las soluciones activas."
 }
 
@@ -674,8 +813,9 @@ quasar_all_exercises() {
     update_flag LAB_NEO4J none "" > /dev/null
     update_flag LAB_ML none "" > /dev/null
     update_flag_preprolab none "" > /dev/null
+    update_flag_llmprep none "" > /dev/null
     ok "Todos los flags vacios — todo en modo ejercicio (scaffold)."
-    compose up -d app-sociallab app-preprolab
+    compose up -d app-sociallab app-preprolab app-llmprep
     ok "Apps reiniciadas en modo ejercicio."
 }
 
@@ -702,8 +842,8 @@ Apps disponibles:
     preprolab    Preprocesamiento clasico (Tema 5) — COMPLETO
                  8 bloques + Pipeline Studio. ~46 ejercicios.
 
-Apps planificadas (proximamente):
-    llmprep      Limpieza de corpus + nanoGPT (Fase posterior del roadmap).
+    llmprep      Limpieza de corpus + nanoGPT (LLM Lab) — Fase 12 esqueleto.
+                 Bloques: clean, dedup, tokenize, train.
 
 Comandos globales (afectan a TODAS las apps):
     tour                         Arranca el ecosistema completo + seed + ETL.
@@ -746,9 +886,7 @@ case "$app" in
         preprolab_cmd "$@"
         ;;
     llmprep)
-        warn "La app 'llmprep' aun no esta implementada."
-        echo "  Esta planificada para una fase posterior del roadmap de Quasar."
-        exit 1
+        llmprep_cmd "$@"
         ;;
     tour)
         quasar_tour
