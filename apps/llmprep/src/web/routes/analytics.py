@@ -53,6 +53,16 @@ else:
     from src.web.routes import tokenize_ex as _tokenize
 router.include_router(_tokenize.router)
 
+# --- Bloque train ---
+# Nota: train (solución) importa funciones de clean (solución). Si se
+# desbloquea train sin clean, igualmente funciona porque importa el módulo
+# clean.py directamente, no el gateado.
+if "train" in _unlocked_blocks:
+    from src.web.routes import train as _train
+else:
+    from src.web.routes import train_ex as _train
+router.include_router(_train.router)
+
 
 @router.get("/api/llmprep/lab/status")
 async def lab_status():

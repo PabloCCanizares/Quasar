@@ -7,7 +7,7 @@
 
 Enseña cómo se limpia un corpus masivo antes de entrenar un modelo de lenguaje, reproduciendo en pequeño el pipeline que usan proyectos reales (CommonCrawl, RedPajama, FineWeb): ingesta → limpieza → deduplicación → tokenización → entrenamiento. La demo culminante es entrenar el mismo nanoGPT sobre el corpus **sin limpiar** y sobre el corpus **limpio**, y comparar la calidad de generación.
 
-## Estado actual: Fase 14 (ingesta + bloque clean operativos)
+## Estado actual: COMPLETA (ingesta + 4 bloques)
 
 | Bloque | Técnicas | Estado |
 |---|---|---|
@@ -15,7 +15,7 @@ Enseña cómo se limpia un corpus masivo antes de entrenar un modelo de lenguaje
 | `clean` | fix_encoding, strip_html, length_filter, language_filter, pii_removal, pipeline | **Fase 14 OK** |
 | `dedup` | exact + MinHash + LSH + grafo `:Document -[:SIMILAR_TO]-> :Document` en Neo4j + Cypher | **Fase 15 OK** |
 | `tokenize` | Tokenizer BPE desde cero + shards `.bin` estilo nanoGPT | **Fase 16 OK** |
-| `train` | nanoGPT (PyTorch) con presets tiny/small/medium/large + comparativa sucio vs limpio | Fase 17 |
+| `train` | Modelo de lenguaje n-gram + comparativa sucio vs limpio | **Fase 17 OK** |
 
 ### Ingesta (Fase 13)
 
@@ -68,6 +68,28 @@ Cuatro ejercicios sobre tokenización BPE (implementado desde cero en `src/token
 | TOK-4 | `POST /api/llmprep/tokenize/build_shards` | train.bin (1.2 MB) + val.bin + vocab.json (uint16) |
 
 Los shards generados (`gold/train.bin`, `gold/val.bin`) son exactamente el formato que el bloque train memory-mapea, igual que en nanoGPT de Karpathy.
+
+### Bloque TRAIN (Fase 17) — la demo culminante
+
+Tres ejercicios. El modelo es un n-gram LM con backoff (`src/train/ngram_lm.py`) que entrena en <1s sin PyTorch; el pipeline (shards → train → sample → comparar) es idéntico al de nanoGPT y el alumno podría sustituir la clase del modelo por un Transformer manteniendo la interfaz.
+
+| Ejercicio | Endpoint | Qué hace |
+|---|---|---|
+| TRAIN-1 | `GET /api/llmprep/train/train` | Entrena sobre corpus limpio, reporta perplexity |
+| TRAIN-2 | `GET /api/llmprep/train/generate` | Muestrea texto con prompt + temperatura |
+| **TRAIN-3 ★** | `GET /api/llmprep/train/compare` | **Modelo sucio vs limpio** (la demo) |
+
+**Resultado verificado de la demo** (TRAIN-3, evaluando ambos modelos sobre el mismo conjunto de validación limpio):
+
+| | vocab | perplexity | generación |
+|---|---|---|---|
+| Corpus **sucio** | 1470 | **3.05** | inflado con tokens de HTML/mojibake |
+| Corpus **limpio** | 1054 | **2.69** | español coherente |
+
+**Mejora de perplexity con limpieza: 12%.** El vocabulario del modelo sucio está inflado (1470 vs 1054) porque aprende a reproducir HTML, mojibake y otros idiomas. Es la lección central de LLM Lab hecha tangible: **la calidad del corpus determina la calidad del modelo**.
+
+Generación de ejemplo (modelo limpio, prompt "la fotosíntesis"):
+> *la fotosíntesis celular representa un pilar del conocimiento. sin ordenador, sería imposible comprender selva. a partir de ahí se puede explicar cómo influye competencia en el ámbito de biología...*
 
 ## Arranque rápido
 
