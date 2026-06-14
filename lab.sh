@@ -732,9 +732,16 @@ llmprep_cmd() {
         logs)
             ensure_docker; compose logs -f "$LLMPREP_SERVICE"
             ;;
-        ingest|clean|tokenize|train)
-            warn "Comando '$cmd' aun no implementado en Fase 12 (esqueleto)."
-            echo "  Se a\xc3\xb1adira en las fases 13-17 del roadmap LLM Lab."
+        ingest)
+            ensure_docker
+            log "Generando corpus sucio (estilo Wikipedia ES dump)..."
+            log "  Output: infra/data/llmprep/raw/corpus.json"
+            compose exec "$LLMPREP_SERVICE" python -m src.ingest.generate_corpus
+            ok "Corpus generado. Datos en infra/data/llmprep/raw/"
+            ;;
+
+        clean|tokenize|train)
+            warn "Comando '$cmd' aun no implementado (Fase 14-17 del roadmap)."
             exit 1
             ;;
         help|--help|-h|"")
