@@ -3,7 +3,7 @@
 const BLOCK_INFO = {
     clean:    { label: "1 · Clean",    desc: "Normalización Unicode, fix encoding, HTML strip, filtro de longitud, idioma, PII.", render: renderClean },
     dedup:    { label: "2 · Dedup",    desc: "Near-duplicates con MinHash/LSH + grafo SIMILAR_TO en Neo4j.", render: renderDedup },
-    tokenize: { label: "3 · Tokenize", desc: "Tokenizer BPE + shards .bin estilo nanoGPT." },
+    tokenize: { label: "3 · Tokenize", desc: "Tokenizer BPE + shards .bin estilo nanoGPT.", render: renderTokenize },
     train:    { label: "4 · Train",    desc: "nanoGPT + comparativa corpus sucio vs limpio." },
 };
 
@@ -222,6 +222,67 @@ async function runDedup(technique, exercise, method) {
         data[listKey].forEach(row => {
             html += "<tr>" + Object.values(row).map(v=>`<td>${typeof v === "number" ? v : String(v).slice(0,40)}</td>`).join("") + "</tr>";
         });
+        html += "</tbody></table>";
+    }
+    if (data.note) html += `<p class="muted" style="margin-top:8px"><em>${data.note}</em></p>`;
+    el.innerHTML = html;
+}
+
+// ============================================================
+// Bloque TOKENIZE
+// ============================================================
+
+async function renderTokenize() {
+    const unlocked = (LAB_STATUS.blocks || {}).tokenize;
+    document.getElementById("content").innerHTML = `
+        <h1>3 · Tokenize — BPE</h1>
+        <p class="muted">Estado: ${unlocked ? "<strong>resuelto</strong>" : "<strong>scaffold</strong>"}. Entrena un tokenizer BPE desde cero sobre el corpus limpio y genera los shards binarios que alimentan el entrenamiento.</p>
+
+        <section class="card">
+            <h2>Pipeline de tokenización</h2>
+            <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
+                <label>merges: <input type="number" id="tok-merges" value="500" min="50" max="2000" style="width:70px"></label>
+                <button class="tbtn" onclick="runTok('train','TOK-1','GET','tok-merges')">TOK-1 · train</button>
+                <button class="tbtn" onclick="runTok('encode','TOK-2','GET')">TOK-2 · encode</button>
+                <button class="tbtn" onclick="runTok('vocab_stats','TOK-3','GET')">TOK-3 · vocab_stats</button>
+                <button class="tbtn" style="background:#7c3aed;color:#fff;border-color:#7c3aed" onclick="runTok('build_shards','TOK-4','POST')">TOK-4 · build_shards</button>
+            </div>
+            <p class="muted" style="font-size:12px">Ejecuta TOK-1 primero (entrena y cachea el tokenizer). Luego encode/vocab_stats/build_shards lo reutilizan.</p>
+            <div id="tok-result"></div>
+        </section>
+    `;
+}
+
+async function runTok(technique, exercise, method, mergesId) {
+    const el = document.getElementById("tok-result");
+    el.innerHTML = "<p class='loading'>procesando (BPE puede tardar ~10-20s)...</p>";
+    let url = `/api/llmprep/tokenize/${technique}`;
+    if (technique === "train" && mergesId) url += `?num_merges=${document.getElementById(mergesId).value}`;
+    const res = await fetch(url, { method });
+    const data = await res.json();
+    if (data.error === "scaffold") {
+        el.innerHTML = `<div class="placeholder" style="text-align:left">
+            <p><strong style="color:#fbbf24">Ejercicio ${data.exercise} sin resolver.</strong></p>
+            <p class="muted">${data.hint}</p>
+            <p class="muted">Implementa en <code>apps/llmprep/src/web/routes/tokenize_ex.py</code>.</p>
+        </div>`;
+        return;
+    }
+    if (data.error) { el.innerHTML = `<p class="error">${data.detail || data.error}</p>`; return; }
+
+    let html = `<h3 style="margin-top:14px">${data.technique}</h3><table class='kv stats-table'>`;
+    Object.entries(data).forEach(([k, v]) => {
+        if (["technique","note","first_merges","tokens","ids","most_common_tokens","files"].includes(k)) return;
+        html += `<tr><th>${k}</th><td>${typeof v === "number" ? v.toLocaleString() : (typeof v === "object" ? JSON.stringify(v) : v)}</td></tr>`;
+    });
+    html += "</table>";
+    if (data.first_merges) html += `<p class="muted">Primeros merges: <code>${data.first_merges.join(" · ")}</code></p>`;
+    if (data.tokens) html += `<p class="muted">Tokens: <code>${data.tokens.join(" ")}</code></p>`;
+    if (data.files) html += `<p class="muted">Shards generados: <code>${JSON.stringify(data.files)}</code></p>`;
+    if (data.most_common_tokens) {
+        html += "<h3 style='margin-top:12px'>Tokens más frecuentes</h3>";
+        html += "<table class='kv'><thead><tr><th>token</th><th>count</th></tr></thead><tbody>";
+        data.most_common_tokens.forEach(t => { html += `<tr><td><code>${t.token}</code></td><td>${t.count.toLocaleString()}</td></tr>`; });
         html += "</tbody></table>";
     }
     if (data.note) html += `<p class="muted" style="margin-top:8px"><em>${data.note}</em></p>`;

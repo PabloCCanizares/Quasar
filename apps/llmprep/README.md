@@ -14,7 +14,7 @@ Enseña cómo se limpia un corpus masivo antes de entrenar un modelo de lenguaje
 | **Ingest** | Corpus sintético tipo Wikipedia ES + 10 categorías de ruido | **Fase 13 OK** |
 | `clean` | fix_encoding, strip_html, length_filter, language_filter, pii_removal, pipeline | **Fase 14 OK** |
 | `dedup` | exact + MinHash + LSH + grafo `:Document -[:SIMILAR_TO]-> :Document` en Neo4j + Cypher | **Fase 15 OK** |
-| `tokenize` | Tokenizer BPE (HuggingFace) + shards `.bin` estilo nanoGPT | Fase 16 |
+| `tokenize` | Tokenizer BPE desde cero + shards `.bin` estilo nanoGPT | **Fase 16 OK** |
 | `train` | nanoGPT (PyTorch) con presets tiny/small/medium/large + comparativa sucio vs limpio | Fase 17 |
 
 ### Ingesta (Fase 13)
@@ -55,6 +55,19 @@ Validación end-to-end:
 - **graph_clusters**: Cypher devuelve docs con hasta 33 vecinos (avg jaccard ~0.9) → candidatos a content farm. Explorable en el Neo4j browser (`:7474`).
 
 Esto conecta directamente con lo que el alumno aprendió en SocialLab (Cypher, grafos), aplicado ahora a un problema de NLP real.
+
+### Bloque TOKENIZE (Fase 16)
+
+Cuatro ejercicios sobre tokenización BPE (implementado desde cero en `src/tokenize/bpe.py`, estilo Sennrich sobre tabla de frecuencias de palabras):
+
+| Ejercicio | Endpoint | Resultado |
+|---|---|---|
+| TOK-1 | `GET /api/llmprep/tokenize/train` | 500 merges, vocab 547. Primeros merges: `de`, `me`, `ti`, `re`, `co` (bigramas españoles frecuentes) |
+| TOK-2 | `GET /api/llmprep/tokenize/encode` | Round-trip exacto, compresión 3.92 chars/token |
+| TOK-3 | `GET /api/llmprep/tokenize/vocab_stats` | Compresión 5.37 sobre 1.2M chars → 222k tokens |
+| TOK-4 | `POST /api/llmprep/tokenize/build_shards` | train.bin (1.2 MB) + val.bin + vocab.json (uint16) |
+
+Los shards generados (`gold/train.bin`, `gold/val.bin`) son exactamente el formato que el bloque train memory-mapea, igual que en nanoGPT de Karpathy.
 
 ## Arranque rápido
 
