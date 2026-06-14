@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Lab — Quasar</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=1">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <strong>LLM Lab</strong>
+            <span class="subtitle">Preparación de corpus para modelos de lenguaje</span>
+        </div>
+        <nav class="app-switcher">
+            <a href="http://localhost:8000" title="Red social poliglota">SocialLab</a>
+            <a href="http://localhost:8002" title="Preprocesamiento Tema 5">PreproLab</a>
+            <span class="current" title="Estas aqui">LLM Lab</span>
+        </nav>
+        <div class="lab-info"><span id="lab-phase">Fase 12 / Esqueleto</span></div>
+    </header>
+
+    <main id="app">
+        <aside class="sidebar">
+            <h2>Pipeline</h2>
+            <ul id="block-list"><li class="loading">cargando...</li></ul>
+            <div class="legend">
+                <p><span class="dot dot-locked"></span>Pendiente</p>
+                <p><span class="dot dot-unlocked"></span>Resuelto</p>
+            </div>
+        </aside>
+        <section id="content" class="content">
+            <h1>Bienvenido a LLM Lab</h1>
+            <p>Selecciona un bloque a la izquierda.</p>
+            <p class="muted">El laboratorio esta en <strong>Fase 12 (esqueleto)</strong>. Los bloques (clean, dedup, tokenize, train) se ir&aacute;n activando seg&uacute;n avance el roadmap.</p>
+        </section>
+    </main>
+
+    <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+    <script src="/static/js/app.js?v=1"></script>
+</body>
+</html>

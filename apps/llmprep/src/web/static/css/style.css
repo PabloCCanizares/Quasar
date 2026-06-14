@@ -1,0 +1,76 @@
+/* LLM Lab - tema purpura para diferenciar de SocialLab (azul) y PreproLab (azul oscuro) */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #14101f;
+    color: #e7e3f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    background: #1c1630;
+    border-bottom: 1px solid #2f2840;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.brand strong { font-size: 18px; margin-right: 12px; color: #a78bfa; }
+.brand .subtitle { color: #8b7fa8; font-size: 13px; }
+.lab-info {
+    color: #8b7fa8; font-size: 13px; padding: 4px 10px;
+    background: #241d38; border-radius: 6px;
+}
+
+.app-switcher {
+    display: flex; gap: 6px; align-items: center;
+    margin-left: auto; margin-right: 16px;
+}
+.app-switcher a, .app-switcher .current {
+    font-size: 12px; padding: 4px 12px; border-radius: 6px; text-decoration: none;
+}
+.app-switcher a { color: #8b7fa8; border: 1px solid #2f2840; }
+.app-switcher a:hover { color: #a78bfa; border-color: #a78bfa; }
+.app-switcher .current { color: #fff; background: #7c3aed; font-weight: 600; }
+
+#app { flex: 1; display: flex; max-width: 1280px; margin: 0 auto; width: 100%; }
+
+.sidebar { width: 260px; padding: 24px 16px; border-right: 1px solid #2f2840; }
+.sidebar h2 {
+    font-size: 13px; color: #8b7fa8; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 12px;
+}
+#block-list { list-style: none; }
+#block-list li {
+    padding: 10px 12px; border-radius: 8px; margin-bottom: 4px; cursor: pointer;
+    display: flex; align-items: center; gap: 10px; color: #d7d0e6; transition: background 0.15s;
+}
+#block-list li:hover { background: #241d38; }
+#block-list li.active { background: #7c3aed; color: white; }
+#block-list li.loading { color: #8b7fa8; font-style: italic; }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-locked { background: #8b7fa8; }
+.dot-unlocked { background: #34d399; }
+
+.legend {
+    margin-top: 24px; padding-top: 16px; border-top: 1px solid #2f2840;
+    font-size: 12px; color: #8b7fa8;
+}
+.legend p { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+
+.content { flex: 1; padding: 32px; }
+.content h1 { margin-bottom: 16px; color: #fff; }
+.content p { margin-bottom: 12px; color: #d7d0e6; }
+.content .muted { color: #8b7fa8; font-size: 14px; }
+.content code {
+    background: #14101f; padding: 2px 6px; border-radius: 4px;
+    font-family: "SF Mono", Consolas, monospace; font-size: 13px; color: #fbbf24;
+}
+.content .placeholder {
+    background: #1c1630; border: 1px solid #2f2840; border-radius: 12px;
+    padding: 32px; margin-top: 24px; text-align: center;
+}
+.content .placeholder h3 { color: #a78bfa; margin-bottom: 8px; }
