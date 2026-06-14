@@ -71,6 +71,7 @@ services:
     environment:
       # Específico de SocialLab — sobreescribe defaults del .env.docker.
       WEB_PORT: "8000"
+      PYTHONPATH: /app
       MONGO_DB: sociallab
       # Archivo de flags que el Hub edita; la app lo lee en cada arranque.
       QUASAR_ENV_FILE: /app/.env.docker
@@ -100,6 +101,7 @@ services:
     environment:
       # Específico de PreproLab — sobreescribe defaults del .env.docker.
       WEB_PORT: "8002"
+      PYTHONPATH: /app
       MONGO_DB: preprolab
       QUASAR_ENV_FILE: /app/.env.docker
     volumes:
@@ -128,6 +130,7 @@ services:
     environment:
       # Específico de LLM Lab — sobreescribe defaults del .env.docker.
       WEB_PORT: "8001"
+      PYTHONPATH: /app
       MONGO_DB: llmprep
       QUASAR_ENV_FILE: /app/.env.docker
     volumes:
@@ -153,6 +156,7 @@ services:
       - "8080:8080"
     environment:
       WEB_PORT: "8080"
+      PYTHONPATH: /app
       # El .env.docker que el Hub edita (rw) para cambiar flags.
       QUASAR_ENV_FILE: /quasar/.env.docker
     volumes:
