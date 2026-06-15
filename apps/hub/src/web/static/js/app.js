@@ -210,9 +210,37 @@ async function bulkConfig(action) {
 // ============================================================
 // ARQUITECTURA
 // ============================================================
+function archDiagram(app) {
+    // Construye un diagrama de flujo horizontal desde app.architecture.
+    // Cada etapa es una caja; un 'split' apila dos cajas en paralelo.
+    const stages = (app.architecture || []).map(stage => {
+        if (stage.split) {
+            const boxes = stage.split.map(s =>
+                `<div class="flow-box split-box"><span class="fb-label">${s.label}</span><span class="fb-sub">${s.sub||""}</span></div>`
+            ).join("");
+            return `<div class="flow-stage"><div class="flow-split">${boxes}</div></div>`;
+        }
+        return `<div class="flow-stage"><div class="flow-box"><span class="fb-label">${stage.label}</span><span class="fb-sub">${stage.sub||""}</span></div></div>`;
+    });
+    return `<div class="flow-diagram" style="--accent:${app.color}">${stages.join('<div class="flow-arrow">→</div>')}</div>`;
+}
+
 async function renderArch() {
     const cat = await getCatalog();
-    const techByApp = cat.apps.map(a => `<tr><td style="color:${a.color}"><strong>${a.name}</strong></td><td>${a.tech.join(" · ")}</td><td><a href="${a.readme}" target="_blank" style="color:#38bdf8">README ↗</a> · <a href="${a.docs}" target="_blank" style="color:#38bdf8">API docs ↗</a></td></tr>`).join("");
+
+    const appDiagrams = cat.apps.map(a => `
+        <div class="app-section">
+            <div class="app-section-head">
+                <h2 style="color:${a.color}">${a.name}</h2>
+                <span class="muted">${a.tagline} · ${a.exercises} ejercicios</span>
+            </div>
+            ${archDiagram(a)}
+            <div class="arch-foot">
+                <span class="tags">${a.tech.map(t=>`<span class="tag">${t}</span>`).join("")}</span>
+                <span><a href="${a.readme}" target="_blank" style="color:#38bdf8">README ↗</a> · <a href="${a.docs}" target="_blank" style="color:#38bdf8">API docs ↗</a> · <a href="${a.url_public}" target="_blank" style="color:#38bdf8">abrir ↗</a></span>
+            </div>
+        </div>`).join("");
+
     document.getElementById("content").innerHTML = `
         <h1>Cómo funciona Quasar</h1>
 
@@ -222,24 +250,14 @@ async function renderArch() {
             <p class="muted">Bloque <strong>desbloqueado</strong> = el alumno ve la solución funcionando. <strong>Bloqueado</strong> = la ve como ejercicio a implementar. El profesor lo controla desde la pestaña Configuración, sin tocar el código.</p>
         </div>
 
-        <h2>Flujo de datos</h2>
-        <div class="app-section">
-            <pre class="flow">
-  seed            ETL (Spark)          carga                 web
- ───────►  raw  ──────────►  silver/gold  ──────►  MongoDB / Neo4j  ──────►  FastAPI + UI
- (datos          (limpieza,    (parquet)    (documentos      (grafo)        (dashboards,
-  sucios)         joins, agg)               + métricas)                      visualizaciones)
-            </pre>
-            <p class="muted">El mismo patrón se repite en las 3 apps. Es exactamente lo que el ecosistema enseña: el recorrido del dato de crudo a explotable.</p>
-        </div>
+        <h2>Arquitectura de cada app</h2>
+        <p class="muted" style="margin-bottom:14px">Las tres comparten el patrón "del dato crudo a explotable", pero cada una lo aterriza en una pila distinta.</p>
+        ${appDiagrams}
 
-        <h2>Infraestructura compartida</h2>
+        <h2 style="margin-top:24px">Infraestructura compartida</h2>
         <div class="app-section">
             <p>Un solo cluster sirve a las 3 apps: <strong>MongoDB</strong> (base documental), <strong>Neo4j</strong> (grafo), <strong>Spark</strong> (ETL/ML). Cada app tiene su propia base de datos y su data lake; comparten servidor, no datos.</p>
         </div>
-
-        <h2>Tecnologías por app</h2>
-        <div class="app-section"><table class="kv">${techByApp}</table></div>
     `;
 }
 
