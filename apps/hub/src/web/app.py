@@ -63,6 +63,7 @@ async def catalog():
                 "docs": m.get("docs"),
                 "readme": m.get("readme"),
                 "tasks": m.get("tasks", {}),
+                "architecture": m.get("architecture", []),
                 "blocks": m["blocks"],
                 "exercises": sum(b["exercises"] for b in m["blocks"]),
             }
