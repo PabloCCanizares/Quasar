@@ -1,0 +1,32 @@
+# Quasar — modo cloud (free tier) para SocialLab.
+#
+# Levanta SOLO el contenedor de la app. MongoDB y Neo4j viven en
+# Atlas / Aura, no se arrancan contenedores locales.
+#
+# Uso:
+#   ./lab.sh sociallab cloud
+#
+# o manualmente desde infra/compose:
+#   docker compose -f docker-compose.cloud.yml --env-file ../../apps/sociallab/.env.cloud up -d --build
+#
+# Requiere un apps/sociallab/.env.cloud relleno (copia .env.cloud.example y completa).
+
+services:
+  app-sociallab:
+    build:
+      context: ../..
+      dockerfile: apps/sociallab/Dockerfile
+    container_name: quasar-sociallab-cloud
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../../apps/sociallab/.env.cloud
+    volumes:
+      - ../../infra/data/sociallab:/app/data
+      - ../../apps/sociallab/src:/app/src
+      - ../../infra/shared:/app/infra/shared
+      - spark_ivy_cloud:/root/.ivy2
+    restart: unless-stopped
+
+volumes:
+  spark_ivy_cloud:

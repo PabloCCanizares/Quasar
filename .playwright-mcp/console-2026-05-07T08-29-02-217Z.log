@@ -1,0 +1,11 @@
+[   27946ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8000/api/users/?limit=5:0
+[   29087ms] TypeError: famousDistances.forEach is not a function
+    at renderReachRadar (http://localhost:8000/static/js/app.js?v=16:552:21)
+    at renderNeo4jOverview (http://localhost:8000/static/js/app.js?v=16:659:19)
+    at renderNeo4jPanel (http://localhost:8000/static/js/app.js?v=16:508:36)
+    at loadNeo4jPanel (http://localhost:8000/static/js/app.js?v=16:488:5)
+[   42412ms] TypeError: famousDistances.forEach is not a function
+    at renderReachRadar (http://localhost:8000/static/js/app.js?v=16:552:21)
+    at renderNeo4jOverview (http://localhost:8000/static/js/app.js?v=16:659:19)
+    at renderNeo4jPanel (http://localhost:8000/static/js/app.js?v=16:508:36)
+    at loadNeo4jPanel (http://localhost:8000/static/js/app.js?v=16:488:5)

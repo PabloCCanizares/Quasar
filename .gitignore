@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# Environment (cada app tiene su .env propio en apps/<app>/.env)
+.env
+.env.cloud
+apps/*/.env
+apps/*/.env.cloud
+
+# Data lake (tracked via .gitkeep, not data files)
+# Una capa por app: infra/data/<app>/{raw,silver,gold}
+infra/data/*/raw/*
+infra/data/*/silver/*
+infra/data/*/gold/*
+infra/data/*/checkpoints/*
+!infra/data/**/.gitkeep
+
+# Generated artifacts
+outputs/
+
+# IDE
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+notebooks/*SOLUCIONES*.ipynb
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log

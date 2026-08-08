@@ -1,0 +1,16 @@
+# Web
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+
+# Cliente HTTP para consultar el estado de las otras 3 apps
+httpx==0.28.*
+
+# Control de contenedores (reinicio + ejecutar seed/etl)
+docker==7.1.*
+
+# Conteo de documentos para el estado de datos
+pymongo==4.11.*
+
+# Config
+python-dotenv==1.1.*
+pydantic==2.11.*

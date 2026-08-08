@@ -1,0 +1,187 @@
+# Quasar — ecosistema completo (infra compartida + apps).
+#
+# Estructura del repo:
+#   Quasar/
+#     apps/sociallab/         ← código de la app SocialLab
+#     apps/preprolab/         ← (próximamente)
+#     apps/llmprep/           ← (próximamente)
+#     infra/shared/           ← libs Python compartidas
+#     infra/compose/          ← este compose
+#     infra/data/<app>/       ← data lake por app
+#
+# Uso:
+#   docker compose -f infra/compose/docker-compose.yml --env-file infra/compose/.env.docker up -d --build
+#   docker compose exec app-sociallab python -m src.seed.generate_dirty_data
+#   docker compose exec app-sociallab python -m src.spark.run_pipeline --all
+#   docker compose exec app-sociallab python -m src.spark.models.run_all
+#
+# Normalmente esto se invoca desde ./lab.sh sociallab <comando> (no manualmente).
+#
+# Web SocialLab: http://localhost:8000
+# Neo4j browser: http://localhost:7474   (user neo4j / pass neo4jneo4j)
+# Mongo:         mongodb://localhost:27017
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: quasar-mongo
+    hostname: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ping:1})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5.20-community
+    container_name: quasar-neo4j
+    hostname: neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/neo4jneo4j
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app-sociallab:
+    build:
+      context: ../..
+      dockerfile: apps/sociallab/Dockerfile
+    container_name: quasar-sociallab
+    hostname: app-sociallab
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.docker
+    environment:
+      # Específico de SocialLab — sobreescribe defaults del .env.docker.
+      WEB_PORT: "8000"
+      PYTHONPATH: /app
+      MONGO_DB: sociallab
+      # Archivo de flags que el Hub edita; la app lo lee en cada arranque.
+      QUASAR_ENV_FILE: /app/.env.docker
+    volumes:
+      - ../../infra/data/sociallab:/app/data
+      - ../../apps/sociallab/src:/app/src
+      - ../../infra/shared:/app/infra/shared
+      - ./.env.docker:/app/.env.docker:ro
+      - spark_ivy:/root/.ivy2
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app-preprolab:
+    build:
+      context: ../..
+      dockerfile: apps/preprolab/Dockerfile
+    container_name: quasar-preprolab
+    hostname: app-preprolab
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env.docker
+    environment:
+      # Específico de PreproLab — sobreescribe defaults del .env.docker.
+      WEB_PORT: "8002"
+      PYTHONPATH: /app
+      MONGO_DB: preprolab
+      QUASAR_ENV_FILE: /app/.env.docker
+    volumes:
+      - ../../infra/data/preprolab:/app/data
+      - ../../apps/preprolab/src:/app/src
+      - ../../infra/shared:/app/infra/shared
+      - ./.env.docker:/app/.env.docker:ro
+      - spark_ivy:/root/.ivy2
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app-llmprep:
+    build:
+      context: ../..
+      dockerfile: apps/llmprep/Dockerfile
+    container_name: quasar-llmprep
+    hostname: app-llmprep
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env.docker
+    environment:
+      # Específico de LLM Lab — sobreescribe defaults del .env.docker.
+      WEB_PORT: "8001"
+      PYTHONPATH: /app
+      MONGO_DB: llmprep
+      QUASAR_ENV_FILE: /app/.env.docker
+    volumes:
+      - ../../infra/data/llmprep:/app/data
+      - ../../apps/llmprep/src:/app/src
+      - ../../infra/shared:/app/infra/shared
+      - ./.env.docker:/app/.env.docker:ro
+      - spark_ivy:/root/.ivy2
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app-hub:
+    build:
+      context: ../..
+      dockerfile: apps/hub/Dockerfile
+    container_name: quasar-hub
+    hostname: app-hub
+    ports:
+      - "8080:8080"
+    environment:
+      WEB_PORT: "8080"
+      PYTHONPATH: /app
+      # El .env.docker que el Hub edita (rw) para cambiar flags.
+      QUASAR_ENV_FILE: /quasar/.env.docker
+      # Data lake (ro) para comprobar si hay datos generados.
+      QUASAR_DATA_ROOT: /quasar/data
+      # Vacío = plano de control abierto (cada alumno en su copia local).
+      # Con valor, /flag /restart /run piden la cabecera X-Quasar-Token.
+      # Útil en instalación compartida o máquina de demo. No protege las
+      # soluciones: para eso está tools/make_student_dist.sh.
+      QUASAR_TEACHER_TOKEN: "${QUASAR_TEACHER_TOKEN:-}"
+    volumes:
+      - ../../apps/hub/src:/app/src
+      - ../../infra/shared:/app/infra/shared
+      # .env.docker editable (rw, a diferencia de las apps que lo montan ro).
+      - ./.env.docker:/quasar/.env.docker
+      # Data lake read-only para el estado de datos.
+      - ../../infra/data:/quasar/data:ro
+      # Docker socket para reiniciar contenedores y lanzar seed/etl.
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  neo4j_data:
+  neo4j_logs:
+  spark_ivy:

@@ -1,0 +1,7 @@
+# Dependencias para correr los tests puros de Quasar (sin Docker/DB).
+# Los tests de la capa ETL Spark (tests/test_etl_silver.py) hacen
+# `pytest.importorskip("pyspark")`, así que se saltan si pyspark/Java no están.
+pytest==8.*
+python-dotenv==1.1.*
+numpy==1.26.*
+pandas==2.2.*
