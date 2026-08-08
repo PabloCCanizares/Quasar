@@ -1,0 +1,45 @@
+name: Docker build
+
+# Construir las 4 imágenes es lo más caro del repo: cada una lleva JDK 17
+# y PySpark. Como el repo es privado y los minutos de Actions se consumen,
+# esto no corre en cada push: solo cuando cambia algo que puede romper una
+# imagen (Dockerfile, dependencias o el compose), a mano, o una vez por
+# semana para detectar que una imagen base se ha roto sola.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/*/Dockerfile"
+      - "apps/*/requirements.txt"
+      - "infra/compose/docker-compose*.yml"
+      - ".github/workflows/docker.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/*/Dockerfile"
+      - "apps/*/requirements.txt"
+      - "infra/compose/docker-compose*.yml"
+  workflow_dispatch:
+  schedule:
+    # Lunes a las 6:00 UTC.
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      # Si una imagen falla, las demás siguen: así se ve de una pasada
+      # cuáles están rotas en vez de ir arreglando de una en una.
+      fail-fast: false
+      matrix:
+        app: [sociallab, preprolab, llmprep, hub]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build ${{ matrix.app }}
+        run: docker build -f apps/${{ matrix.app }}/Dockerfile -t quasar-${{ matrix.app }} .

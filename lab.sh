@@ -900,6 +900,61 @@ quasar_down_all() {
 }
 
 # ==========================================================
+# Distribucion para alumnos
+# ==========================================================
+
+# Regenera la copia sin soluciones y la sincroniza contra el repo publico
+# de alumnos, dejandola commiteada. El push se confirma a mano: es lo que
+# hace publico el contenido.
+quasar_dist() {
+    local target="${1:-$DIR/../quasar-alumnos}"
+    local tmp
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "$tmp"' RETURN
+
+    log "Generando copia sin soluciones..."
+    if ! "$DIR/tools/make_student_dist.sh" "$tmp/dist" > "$tmp/log" 2>&1; then
+        cat "$tmp/log"
+        err "No se pudo generar la copia"
+        return 1
+    fi
+    grep -E 'retirados|Revisado' "$tmp/log" | sed 's/^/  /' || true
+
+    if [ ! -d "$target/.git" ]; then
+        mkdir -p "$(dirname "$target")"
+        mv "$tmp/dist" "$target"
+        ok "Copia creada en $target"
+        echo
+        echo "Es la primera vez, asi que falta enlazarla con el repo de alumnos:"
+        echo "  cd $target"
+        echo "  git init -b main && git add -A && git commit -m 'Quasar'"
+        echo "  gh repo create <usuario>/Quasar --public --source=. --push"
+        return 0
+    fi
+
+    log "Sincronizando con $target"
+    rsync -a --delete --exclude '.git' "$tmp/dist/" "$target/"
+
+    cd "$target"
+    git add -A
+    if git diff --cached --quiet; then
+        ok "El repo de alumnos ya estaba al dia (sin cambios)"
+        return 0
+    fi
+
+    echo
+    log "Cambios que se publicarian:"
+    git -c color.status=always status --short | sed 's/^/  /'
+    echo
+
+    git commit -q -m "Actualiza la plataforma desde el repo de desarrollo"
+    ok "Commit hecho en $target"
+    echo
+    warn "Falta subirlo (esto lo hace publico):"
+    echo "  cd $target && git push"
+}
+
+# ==========================================================
 # Top-level routing
 # ==========================================================
 
@@ -912,12 +967,12 @@ Uso:    ./lab.sh <app> <comando> [args]
 
 Apps disponibles:
     sociallab    Red social poliglota (Twitter + MongoDB + Neo4j + Spark ML)
-                 33 ejercicios en 3 bloques Cypher + 3 bloques ML.
+                 18 ejercicios en 3 bloques Cypher + 3 bloques ML.
     preprolab    Preprocesamiento clasico (Tema 5) — COMPLETO
-                 8 bloques + Pipeline Studio. ~46 ejercicios.
+                 8 bloques + Pipeline Studio. 37 ejercicios.
 
     llmprep      Limpieza de corpus para LLMs (LLM Lab) — completa.
-                 Bloques: clean, dedup, tokenize, train.
+                 Bloques: clean, dedup, tokenize, train. 18 ejercicios.
 
 Comandos globales (afectan a TODAS las apps):
     tour                         Arranca el ecosistema completo + seed + ETL.
@@ -925,6 +980,8 @@ Comandos globales (afectan a TODAS las apps):
     all-solutions                Desbloquea todos los bloques de todas las apps.
     all-exercises                Bloquea todo (modo alumno) en todas las apps.
     down-all                     Para todo el ecosistema.
+    dist [ruta]                  Actualiza la copia para alumnos (sin soluciones)
+                                 y la deja lista para subir al repo publico.
 
 Comandos por app (varian):
     up [exercises|solutions]    Arranca la app
@@ -976,6 +1033,9 @@ case "$app" in
         ;;
     down-all)
         quasar_down_all
+        ;;
+    dist)
+        quasar_dist "$@"
         ;;
     help|--help|-h|"")
         quasar_usage

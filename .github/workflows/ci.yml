@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# Si llegan varios push seguidos, cancela los anteriores en vez de
+# ejecutarlos todos (el repo es privado y los minutos cuentan).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   tests:
     name: Tests (módulos puros)
@@ -69,20 +75,5 @@ jobs:
         # No bloqueante por ahora: reporta pero no falla el build.
         run: ruff check apps/ infra/ tests/ --output-format=github || true
 
-  smoke-build:
-    name: Docker build (las 3 apps + Hub)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Build SocialLab
-        run: docker build -f apps/sociallab/Dockerfile -t quasar-sociallab .
-
-      - name: Build PreproLab
-        run: docker build -f apps/preprolab/Dockerfile -t quasar-preprolab .
-
-      - name: Build LLM Lab
-        run: docker build -f apps/llmprep/Dockerfile -t quasar-llmprep .
-
-      - name: Build Hub
-        run: docker build -f apps/hub/Dockerfile -t quasar-hub .
+# El build de las imágenes Docker vive en docker.yml: es lo más caro de
+# ejecutar y solo hace falta cuando cambia algo que afecta a las imágenes.
