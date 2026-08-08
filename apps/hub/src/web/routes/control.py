@@ -55,8 +55,9 @@ def _require_teacher(token: str | None) -> None:
 # reflejará el resultado cuando termine.
 TASKS = {
     "sociallab": {
-        "seed": (["python", "-m", "src.seed.generate_dirty_data"], False),
-        "etl":  (["python", "-m", "src.spark.run_pipeline", "--all"], True),
+        "seed":  (["python", "-m", "src.seed.generate_dirty_data"], False),
+        "etl":   (["python", "-m", "src.spark.run_pipeline", "--all"], True),
+        "train": (["python", "-m", "src.spark.models.run_all"], True),
     },
     "preprolab": {
         "seed": (["python", "-m", "src.seed.generate_robot_fleet"], False),
@@ -220,3 +221,71 @@ async def run_task(
         raise
     except Exception as e:
         raise HTTPException(503, detail=f"No pude ejecutar {req.task} en {meta['container']}: {e}")
+
+
+# ============================================================
+# Logs y encendido/apagado por app
+# ============================================================
+
+@router.get("/logs")
+async def app_logs(app: str, lines: int = 120) -> dict:
+    """Últimas líneas del log de una app (equivale a `./lab.sh <app> logs`).
+
+    Es de solo lectura, así que no pide token: cuando algo falla, mirar el
+    log es justo lo primero que hay que poder hacer.
+    """
+    meta = APPS.get(app)
+    if not meta:
+        raise HTTPException(404, detail=f"App desconocida: {app}")
+    lines = max(10, min(lines, 500))
+    try:
+        import docker
+        container = docker.from_env().containers.get(meta["container"])
+        raw = container.logs(tail=lines, timestamps=False)
+        return {
+            "app": app,
+            "container": meta["container"],
+            "status": container.status,
+            "lines": raw.decode("utf-8", errors="replace"),
+        }
+    except Exception as e:
+        raise HTTPException(503, detail=f"No pude leer los logs de {meta['container']}: {e}")
+
+
+class PowerChange(BaseModel):
+    app: str
+    action: str  # start | stop
+
+
+@router.post("/power")
+async def power_app(
+    change: PowerChange,
+    x_quasar_token: str | None = Header(default=None),
+) -> dict:
+    """Arranca o para el contenedor de una app (`./lab.sh <app> up|down`).
+
+    El Hub se excluye a propósito: apagarlo desde aquí dejaría al usuario
+    sin la página desde la que está pulsando.
+    """
+    _require_teacher(x_quasar_token)
+    if change.app == "hub":
+        raise HTTPException(400, detail="El Hub no puede apagarse a sí mismo.")
+    meta = APPS.get(change.app)
+    if not meta:
+        raise HTTPException(404, detail=f"App desconocida: {change.app}")
+    if change.action not in ("start", "stop"):
+        raise HTTPException(400, detail="La acción debe ser start o stop")
+
+    try:
+        import docker
+        container = docker.from_env().containers.get(meta["container"])
+        if change.action == "start":
+            container.start()
+        else:
+            container.stop(timeout=10)
+        container.reload()
+        return {"app": change.app, "action": change.action, "status": container.status}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(503, detail=f"No pude {change.action} {meta['container']}: {e}")

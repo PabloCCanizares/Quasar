@@ -64,7 +64,11 @@ APPS = {
             ]},
             {"label": "FastAPI + Web", "sub": "timeline · grafo · ML (spam, churn…)"},
         ],
-        "tasks": {"seed": "Generar datos sucios", "etl": "ETL Spark → Mongo + Neo4j"},
+        "tasks": {
+            "seed": "Generar datos sucios",
+            "etl": "ETL Spark → Mongo + Neo4j",
+            "train": "Entrenar modelos ML",
+        },
         "uses_neo4j": True,
         "uses_mongo": True,
         "blocks": [
@@ -95,7 +99,10 @@ APPS = {
             {"label": "Pipeline Studio", "sub": "compone bloques → RandomForest"},
             {"label": "Web (Plotly)", "sub": "comparativa AUC · F1 · ROC"},
         ],
-        "tasks": {"seed": "Generar flota de robots"},
+        "tasks": {
+            "seed": "Generar flota de robots",
+            "etl": "ETL Spark → silver",
+        },
         "uses_neo4j": False,
         "uses_mongo": True,
         "blocks": [
@@ -129,7 +136,10 @@ APPS = {
             {"label": "Tokenize", "sub": "BPE → shards .bin"},
             {"label": "Train", "sub": "demo sucio vs limpio (perplexity)"},
         ],
-        "tasks": {"ingest": "Generar corpus sucio"},
+        "tasks": {
+            "ingest": "Generar corpus sucio",
+            "etl": "ETL Spark → silver",
+        },
         "uses_neo4j": True,
         "uses_mongo": True,
         "blocks": [

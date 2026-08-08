@@ -79,43 +79,96 @@ function dot(online) { return `<span class="status-dot ${online ? 'dot-online':'
 // ============================================================
 // HOME
 // ============================================================
+// Qué conceptos se practican en cada laboratorio. Los títulos salen de
+// buildConcepts, así que si allí cambia el nombre de una idea, aquí cambia
+// solo: esto solo dice qué número va con qué app.
+const APP_CONCEPTS = {
+    sociallab: [2, 3, 7],
+    preprolab: [1, 5, 6],
+    llmprep:   [5, 8],
+};
+
+// El hilo del curso: cuatro paradas, de los datos crudos al modelo.
+function courseArc(P) {
+    const noisy = P.llmprep ? (P.llmprep.docs || 0) - (P.llmprep.clean_docs || 0) : null;
+    const steps = [
+        { k: "Empiezas aquí", t: "Datos sucios",
+          d: noisy ? `${noisy.toLocaleString('es')} problemas esperándote` : "nulls, duplicados, encoding roto…",
+          c: "#38bdf8" },
+        { k: "Los limpias", t: "Preprocesamiento",
+          d: "las técnicas del Tema 5, una a una", c: "#1d9bf0" },
+        { k: "Los explotas", t: "Bases poliglotas + ML",
+          d: "MongoDB, Neo4j y seis modelos", c: "#34d399" },
+        { k: "Y das el salto", t: "Datos para LLMs",
+          d: "corpus sucio vs limpio", c: "#a78bfa" },
+    ];
+    return steps.map((s, i) => `
+        <a class="arc-step" href="#learn" style="--accent:${s.c}">
+            <span class="arc-k">${s.k}</span>
+            <span class="arc-t">${s.t}</span>
+            <span class="arc-d">${s.d}</span>
+        </a>${i < steps.length - 1 ? '<span class="arc-sep">→</span>' : ''}`).join("");
+}
+
 async function renderHome() {
     const el = document.getElementById("content");
-    const [cat, status, infra] = await Promise.all([
+    const [cat, status, infra, prof] = await Promise.all([
         getCatalog(), fetchJSON("/api/hub/status"), fetchJSON("/api/hub/infra"),
+        safeJSON("/api/hub/profiles"),
     ]);
+    const P = (prof && prof.profiles) || {};
     const onlineMap = {}; status.apps.forEach(a => onlineMap[a.key] = a.online);
 
-    const cards = cat.apps.map(app => `
+    // Títulos de los conceptos, para etiquetar cada laboratorio con lo que enseña.
+    const appMap = {}; cat.apps.forEach(a => appMap[a.key] = a);
+    const titles = {};
+    buildConcepts({ app: appMap, P }, infra, k => (appMap[k] || {}).url_public || "#")
+        .forEach(c => titles[c.n] = c.title);
+
+    const cards = cat.apps.map(app => {
+        const ds = (infra.data || {})[app.key] || {};
+        const learns = (APP_CONCEPTS[app.key] || []).map(n =>
+            `<a class="lc-chip" href="#learn">${titles[n] || ""}</a>`).join("");
+        return `
         <div class="app-card" style="--accent:${app.color}">
             <div class="accent-bar"></div>
             <h2>${app.name}</h2>
             <div class="tagline">${app.tagline}</div>
             <p>${app.description}</p>
+            <div class="lc-what">Aquí practicas</div>
+            <div class="lc-chips">${learns}</div>
             <div class="tags">${app.tech.map(t=>`<span class="tag">${t}</span>`).join("")}</div>
             <div class="card-foot">
-                <span class="port">${dot(onlineMap[app.key])}${app.url_public.replace('http://localhost','')} · ${app.exercises} ejercicios</span>
+                <span class="port">${dot(onlineMap[app.key])}${app.url_public.replace('http://localhost','')} · ${app.exercises} ejercicios
+                    ${ds.seeded ? '· <span style="color:#34d399">datos listos</span>' : '· <span style="color:#64748b">sin datos</span>'}</span>
                 <a class="open-btn" href="${app.url_public}" target="_blank">Abrir →</a>
             </div>
-        </div>`).join("");
+        </div>`;
+    }).join("");
 
     el.innerHTML = `
         <div class="hero">
             <h1>✦ QUASAR</h1>
-            <p>Plataforma docente de Big Data + IA. Un único stack poliglota que aloja <strong>tres laboratorios</strong> con ${cat.total_exercises} ejercicios, sobre infraestructura compartida (MongoDB · Neo4j · Spark).</p>
+            <p>Del dato crudo al modelo entrenado. Tres laboratorios y ${cat.total_exercises} ejercicios sobre un mismo stack: MongoDB, Neo4j y Spark.</p>
         </div>
-        <div class="infra-strip">
+
+        <div class="arc">${courseArc(P)}</div>
+        <p class="arc-foot-link">
+            <a href="#learn">Las ${Object.keys(titles).length} ideas del curso, en detalle →</a>
+        </p>
+
+        <h2 class="home-h">Dónde se practica</h2>
+        <div class="app-grid">${cards}</div>
+
+        <div class="infra-strip" style="margin-top:24px">
             ${infraChip("MongoDB", infra.infra.mongodb.online, infra.infra.mongodb.role)}
             ${infraChip("Neo4j", infra.infra.neo4j.online, infra.infra.neo4j.role, "http://localhost:7474")}
             <span class="infra-summary">${status.summary.apps_online}/${status.summary.apps_total} apps · ${status.summary.blocks_unlocked}/${status.summary.blocks_total} bloques destapados</span>
         </div>
-        <div class="app-grid">${cards}</div>
-        <p style="text-align:center;margin-top:26px">
-            <a href="#" onclick="showView('learn');return false" class="open-btn" style="--accent:#38bdf8;background:#0e7490;padding:10px 22px">✦ La asignatura en 10 ideas →</a>
-        </p>
-        <p class="muted" style="text-align:center;margin-top:16px">
-            <a href="#" onclick="showView('arch');return false" style="color:#38bdf8">¿Cómo funciona Quasar? →</a> ·
-            <a href="#" onclick="showView('onboarding');return false" style="color:#38bdf8">Primeros pasos →</a>
+        <p class="muted" style="text-align:center;margin-top:18px">
+            <a href="#onboarding" style="color:#38bdf8">Primeros pasos →</a> ·
+            <a href="#arch" style="color:#38bdf8">Cómo funciona Quasar →</a> ·
+            <a href="#status" style="color:#38bdf8">Estado del ecosistema →</a>
         </p>`;
 }
 
@@ -303,7 +356,26 @@ async function renderLearn() {
     const url = k => (app[k] || {}).url_public || "#";
     const ctx = { app, flags, P, gen };
 
-    const concepts = [
+    const concepts = buildConcepts(ctx, infra, url);
+
+    el.innerHTML = `
+        <div class="hero" style="padding-bottom:20px">
+            <h1>La asignatura en 10 ideas</h1>
+            <p>De los datos en crudo al modelo entrenado. Cada idea te lleva al laboratorio donde se trabaja, y varias las verás con <strong>tus propios datos</strong>, no con ejemplos de pizarra.</p>
+        </div>
+        <div class="concept-grid">${concepts.map(c => conceptCard(c, ctx)).join("")}</div>
+        <p class="muted" style="text-align:center;margin-top:26px">
+            ¿Listo para empezar? <a href="#onboarding" style="color:#38bdf8">Primeros pasos →</a> ·
+            <a href="#arch" style="color:#38bdf8">Cómo encaja todo →</a>
+        </p>`;
+}
+
+// Fuente única de los conceptos: los usan Aprende (completos) y la
+// portada (en versión resumida). Definirlos dos veces era garantía de
+// que acabaran diciendo cosas distintas.
+function buildConcepts(ctx, infra, url) {
+    const { app, P } = ctx;
+    return [
         { n:1, color:"#38bdf8", tag:"Punto de partida", title:"Datos masivos = datos sucios a escala",
           what:"Los datos reales no vienen limpios: faltan campos, se repiten registros, las fechas aparecen en cinco formatos y hay demasiados para abrirlos en Excel.",
           idea:"Nadie va a tener datos limpios en su carrera. Aprender a arreglarlos es de lo que va todo esto.",
@@ -358,17 +430,6 @@ async function renderLearn() {
           more:"En cualquier concepto de arriba puedes pulsar «Ampliar» y alternar cada bloque entre solución y ejercicio tú mismo: es tu copia de la app, así que mandas tú. Ver la solución primero para estudiarla, o dejarla en blanco para pelearte con ella, lo eliges según te venga.",
           practice:{label:"Cómo funciona Quasar", view:"arch"} },
     ];
-
-    el.innerHTML = `
-        <div class="hero" style="padding-bottom:20px">
-            <h1>La asignatura en 10 ideas</h1>
-            <p>De los datos en crudo al modelo entrenado. Cada idea te lleva al laboratorio donde se trabaja, y varias las verás con <strong>tus propios datos</strong>, no con ejemplos de pizarra.</p>
-        </div>
-        <div class="concept-grid">${concepts.map(c => conceptCard(c, ctx)).join("")}</div>
-        <p class="muted" style="text-align:center;margin-top:26px">
-            ¿Listo para empezar? <a href="#" onclick="showView('onboarding');return false" style="color:#38bdf8">Primeros pasos →</a> ·
-            <a href="#" onclick="showView('arch');return false" style="color:#38bdf8">Cómo encaja todo →</a>
-        </p>`;
 }
 
 // ============================================================
@@ -413,11 +474,16 @@ async function renderStatus() {
                 <span class="data-badge ${ds.seeded?'ok':'no'}">${ds.seeded ? '✓ '+ds.seed_label+' ('+ds.seed_size_mb+' MB)' : '○ '+(ds.seed_label||'datos')+' sin generar'}</span>
                 ${ds.db_loaded ? `<span class="data-badge ok">✓ ${dbSummary(ds.db_counts)}</span>` : ''}
                 <span class="task-btns">${taskBtns}</span>
-                <button class="mini-btn ghost" onclick="restartApp('${app.key}','${app.name}')">reiniciar</button>
+                ${app.online
+                    ? `<button class="mini-btn ghost" onclick="restartApp('${app.key}','${app.name}')">reiniciar</button>
+                       <button class="mini-btn ghost" onclick="powerApp('${app.key}','${app.name}','stop')">parar</button>`
+                    : `<button class="mini-btn" onclick="powerApp('${app.key}','${app.name}','start')">arrancar</button>`}
+                <button class="mini-btn ghost" onclick="showLogs('${app.key}','${app.name}')">logs</button>
             </div>
+            <pre class="log-box" id="logs-${app.key}" hidden></pre>
             ${app.blocks.length ? `<div class="blocks-grid">${app.blocks.map(b=>`
                 <div class="block-chip ${b.unlocked?'unlocked':'locked'}" title="${b.desc}"><span class="bdot"></span>${b.label} <span class="ex">${b.exercises}</span></div>
-            `).join("")}</div>` : `<p class="muted">${app.online?'Sin bloques.':'Caída — arráncala con ./lab.sh '+app.key+' up'}</p>`}
+            `).join("")}</div>` : `<p class="muted">${app.online?'Sin bloques.':'Caída — arráncala con el botón de arriba o <code>./lab.sh '+app.key+' up</code>'}</p>`}
         </div>`;
     });
     html += `<p class="muted" style="text-align:center;margin-top:8px"><button class="mini-btn ghost" onclick="renderStatus()">↻ refrescar</button></p>`;
@@ -444,6 +510,31 @@ async function restartApp(app, name) {
     if (!ok) { toast("Error: "+(data.detail||"fallo")); return; }
     toast(`${name} reiniciado.`);
     setTimeout(() => { if (CURRENT_VIEW==="status") renderStatus(); }, 3000);
+}
+
+async function powerApp(app, name, action) {
+    toast(`${action === "start" ? "Arrancando" : "Parando"} ${name}...`);
+    const { ok, data } = await postControl("/api/hub/power", { app, action });
+    if (!ok) { toast("Error: " + (data.detail || "fallo")); return; }
+    toast(`${name}: ${data.status}.`);
+    // Arrancar lleva unos segundos hasta que la app responde.
+    setTimeout(() => { if (CURRENT_VIEW==="status") renderStatus(); }, action === "start" ? 6000 : 2000);
+}
+
+async function showLogs(app, name) {
+    const box = document.getElementById(`logs-${app}`);
+    if (!box) return;
+    if (!box.hidden) { box.hidden = true; return; }   // segundo clic: ocultar
+    box.hidden = false;
+    box.textContent = "leyendo logs...";
+    try {
+        const data = await fetchJSON(`/api/hub/logs?app=${encodeURIComponent(app)}&lines=120`);
+        if (data.detail) { box.textContent = `No se pudieron leer: ${data.detail}`; return; }
+        box.textContent = (data.lines || "").trim() || `(${name} no ha escrito nada todavía)`;
+        box.scrollTop = box.scrollHeight;   // abajo del todo: lo último es lo que interesa
+    } catch {
+        box.textContent = "No se pudieron leer los logs.";
+    }
 }
 
 // ============================================================
