@@ -64,7 +64,23 @@ function showView(view, opts) {
 }
 
 function routeFromHash() {
-    showView((location.hash || "#home").slice(1), { fromHash: true });
+    const ruta = (location.hash || "#home").slice(1);
+    // Las páginas de tema llevan su número en la ruta: se puede enlazar un
+    // tema concreto y sobrevive a un refresco.
+    const m = ruta.match(/^tema\/(\d+)$/);
+    if (m) {
+        CURRENT_VIEW = "tema";
+        document.querySelectorAll(".tab").forEach(x =>
+            x.classList.toggle("active", x.dataset.view === "home"));
+        Promise.resolve(renderTema(parseInt(m[1], 10))).catch(err => {
+            console.error(err);
+            document.getElementById("content").innerHTML =
+                `<h1>No se ha podido cargar el tema</h1>
+                 <p class="muted"><a href="#home" style="color:#38bdf8">← Volver al temario</a></p>`;
+        });
+        return;
+    }
+    showView(ruta, { fromHash: true });
 }
 
 function toast(msg) {
@@ -119,13 +135,11 @@ function paradaTema(tema, hechos, onlineMap, dataMap) {
     let insignia, accion;
     if (teoria) {
         insignia = `<span class="chip-teoria">◇ solo teoría</span>`;
-        accion = tema.enlace
-            ? `<a class="parada-link" href="#${tema.enlace.vista}">${tema.enlace.texto} →</a>`
-            : `<span class="pendiente">sin laboratorio todavía</span>`;
+        accion = `<a class="parada-link" href="#tema/${tema.n}">Leer el tema →</a>`;
     } else {
         const ds = dataMap[tema.app] || {};
         insignia = `<span class="chip-lab" style="--c:${color}">${dot(onlineMap[tema.app])}${tema.app_nombre}</span>`;
-        accion = `<a class="parada-btn" style="--c:${color}" href="${tema.url}" target="_blank">Abrir</a>
+        accion = `<a class="parada-btn" style="--c:${color}" href="#tema/${tema.n}">Ver tema</a>
             <span class="prog">${tema.ejercicios} ejercicios · ${
                 ds.seeded ? "datos listos" : "sin datos"}</span>`;
     }
@@ -138,7 +152,9 @@ function paradaTema(tema, hechos, onlineMap, dataMap) {
         </button>
         <div class="parada-caja">
             <div class="parada-txt">
-                <div class="linea"><h3>${tema.n} · ${tema.titulo}</h3>${insignia}
+                <div class="linea">
+                    <h3><a class="parada-tit" href="#tema/${tema.n}">${tema.n} · ${tema.titulo}</a></h3>
+                    ${insignia}
                     ${tema.minutos ? `<span class="parada-min">${duracion(tema.minutos)}</span>` : ""}</div>
                 <p>${tema.resumen}</p>
                 ${tema.objetivo ? `<p class="parada-obj"><span>Al terminar sabrás</span> ${tema.objetivo}.</p>` : ""}
@@ -146,6 +162,142 @@ function paradaTema(tema, hechos, onlineMap, dataMap) {
             <div class="parada-accion">${accion}</div>
         </div>
     </div>`;
+}
+
+// ============================================================
+// PÁGINA DE UN TEMA
+// ============================================================
+function parrafosLeccion(teoria) {
+    return (teoria || [])
+        .map(x => `<p>${x.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")}</p>`)
+        .join("");
+}
+
+function marcarTemaDesdePagina(n) {
+    const hechos = temasHechos();
+    hechos.has(n) ? hechos.delete(n) : hechos.add(n);
+    localStorage.setItem("quasar_temas", JSON.stringify([...hechos]));
+    renderTema(n);
+}
+
+// Cuestionario de ensayo. No hay nota ni se envía nada: al pulsar una
+// opción se dice si acertaste y, sobre todo, por qué. El valor está en la
+// explicación, no en el marcador — los cuestionarios evaluables son otros.
+let RESPUESTAS = {};
+
+function responder(idx, opcion) {
+    RESPUESTAS[idx] = opcion;
+    pintarPregunta(idx);
+}
+
+function pintarPregunta(idx) {
+    const caja = document.getElementById(`preg-${idx}`);
+    if (!caja) return;
+    const q = PREGUNTAS_TEMA[idx];
+    const elegida = RESPUESTAS[idx];
+    const contestada = elegida !== undefined;
+
+    const opciones = q.opciones.map((texto, i) => {
+        let clase = "cu-op";
+        if (contestada) {
+            if (i === q.correcta) clase += " ok";
+            else if (i === elegida) clase += " mal";
+            else clase += " gris";
+        }
+        return `<button class="${clase}" ${contestada ? "disabled" : ""}
+            onclick="responder(${idx}, ${i})">
+            <span class="cu-marca">${contestada && i === q.correcta ? "✓"
+                : contestada && i === elegida ? "✗" : ""}</span>${texto}</button>`;
+    }).join("");
+
+    caja.innerHTML = `
+        <p class="cu-enun"><span>${idx + 1}</span>${q.enunciado}</p>
+        <div class="cu-ops">${opciones}</div>
+        ${contestada ? `<p class="cu-porque">${q.porque}</p>` : ""}`;
+}
+
+let PREGUNTAS_TEMA = [];
+
+function cuestionario(preguntas) {
+    PREGUNTAS_TEMA = preguntas;
+    RESPUESTAS = {};
+    const cajas = preguntas.map((_, i) => `<div class="cu-preg" id="preg-${i}"></div>`).join("");
+    return `<h2 class="tb-h">Compruébate</h2>
+        <p class="muted" style="margin-bottom:14px">Sin nota y sin enviarse a ningún sitio: es
+        para ver si te ha quedado claro antes de seguir. Lo que importa es la explicación de
+        después, no acertar a la primera.</p>
+        <div class="cuestionario">${cajas}</div>`;
+}
+
+async function renderTema(n) {
+    const el = document.getElementById("content");
+    el.innerHTML = "<div class='loading'>cargando el tema...</div>";
+    const [cat, status] = await Promise.all([
+        getCatalog(), fetchJSON("/api/hub/status"),
+    ]);
+    const unidades = cat.temario || [];
+    const todos = unidades.flatMap(u => u.temas.map(x => ({ ...x, unidad: u })));
+    const tema = todos.find(x => x.n === n);
+    if (!tema) { location.hash = "home"; return; }
+
+    const prev = todos.find(x => x.n === n - 1);
+    const sig = todos.find(x => x.n === n + 1);
+    const color = tema.color || "#38bdf8";
+    const hecho = temasHechos().has(tema.n);
+    const online = (status.apps.find(a => a.key === tema.app) || {}).online;
+
+    const bloques = (tema.bloques || []).map(b => `
+        <div class="tb-bloque">
+            <div class="tb-b-cab"><strong>${b.label}</strong>
+                <span class="tb-b-n">${b.exercises} ejercicios</span></div>
+            <p>${b.desc}</p>
+        </div>`).join("");
+
+    const recursos = [
+        tema.material ? `<span class="lec-mat">📄 ${tema.material}</span>` : "",
+        tema.practica ? `<span class="lec-prac">✎ ${tema.practica}</span>` : "",
+        tema.app ? `<a class="tb-abrir" style="--c:${color}" href="${tema.url}" target="_blank">${dot(online)}Abrir ${tema.app_nombre} ↗</a>` : "",
+        tema.enlace ? `<a class="parada-link" href="#${tema.enlace.vista}">${tema.enlace.texto} →</a>` : "",
+    ].filter(Boolean).join("");
+
+    el.innerHTML = `
+        <div class="tb-migas">
+            <a href="#home">← Temario</a>
+            <span>${tema.unidad.titulo}</span>
+            ${tema.unidad.oficial === false ? `<span class="unidad-extra">fuera del programa</span>` : ""}
+        </div>
+
+        <div class="tb-cab" style="--c:${color}">
+            <div class="tb-num">${tema.n}</div>
+            <div class="tb-cab-txt">
+                <h1>${tema.titulo}</h1>
+                <div class="tb-meta">
+                    ${tema.app
+                        ? `<span class="chip-lab" style="--c:${color}">${tema.app_nombre}</span>`
+                        : `<span class="chip-teoria">◇ solo teoría</span>`}
+                    ${tema.minutos ? `<span class="parada-min">${duracion(tema.minutos)}</span>` : ""}
+                    ${tema.ejercicios ? `<span class="parada-min">${tema.ejercicios} ejercicios</span>` : ""}
+                </div>
+            </div>
+            <button class="tb-hecho ${hecho ? "si" : ""}" onclick="marcarTemaDesdePagina(${tema.n})">
+                ${hecho ? "✓ hecho" : "marcar como hecho"}
+            </button>
+        </div>
+
+        ${tema.objetivo ? `<p class="tb-obj"><span>Al terminar sabrás</span> ${tema.objetivo}.</p>` : ""}
+        <p class="tb-resumen">${tema.resumen}</p>
+        ${tema.teoria && tema.teoria.length ? `<div class="tb-leccion">${parrafosLeccion(tema.teoria)}</div>` : ""}
+        ${bloques ? `<h2 class="tb-h">Qué se practica</h2><div class="tb-bloques">${bloques}</div>` : ""}
+        ${recursos ? `<div class="tb-recursos">${recursos}</div>` : ""}
+
+        ${tema.preguntas && tema.preguntas.length ? cuestionario(tema.preguntas) : ""}
+
+        <div class="tb-nav">
+            ${prev ? `<a href="#tema/${prev.n}">← ${prev.n} · ${prev.titulo}</a>` : "<span></span>"}
+            ${sig ? `<a href="#tema/${sig.n}">${sig.n} · ${sig.titulo} →</a>` : "<span></span>"}
+        </div>`;
+
+    (tema.preguntas || []).forEach((_, i) => pintarPregunta(i));
 }
 
 async function renderHome() {
@@ -158,12 +310,14 @@ async function renderHome() {
     const hechos = temasHechos();
     const unidades = cat.temario || [];
     const totalTemas = unidades.reduce((n, u) => n + u.temas.length, 0);
-    const totalMin = unidades.reduce((n, u) => n + (u.minutos || 0), 0);
+    const oficialMin = unidades.filter(u => u.oficial !== false)
+                               .reduce((n, u) => n + (u.minutos || 0), 0);
 
     const ruta = unidades.map(u => `
-        <div class="unidad-sep">
+        <div class="unidad-sep ${u.oficial === false ? "extra" : ""}">
             <span class="unidad-num">${u.titulo}</span>
             <span class="unidad-preg">${u.pregunta}</span>
+            ${u.oficial === false ? `<span class="unidad-extra">fuera del programa</span>` : ""}
             ${u.minutos ? `<span class="unidad-min">${duracion(u.minutos)}</span>` : ""}
         </div>
         ${u.temas.map(t => paradaTema(t, hechos, onlineMap, dataMap)).join("")}
@@ -179,7 +333,7 @@ async function renderHome() {
             sucios, tardíos y a escala.</p>
             <div class="curso-meta">
                 <span>${hechos.size} de ${totalTemas} temas marcados</span>
-                ${totalMin ? `<span>· ${duracion(totalMin)} de trabajo estimado</span>` : ""}
+                ${oficialMin ? `<span>· ${duracion(oficialMin)} del programa</span>` : ""}
                 <span class="barra-curso"><span style="width:${pct}%"></span></span>
                 ${hechos.size ? `<button class="reset-temas" onclick="reiniciarTemas()">reiniciar</button>` : ""}
             </div>
@@ -217,53 +371,8 @@ async function safeJSON(url) {
     try { return await fetchJSON(url); } catch { return {}; }
 }
 
-// --- Helpers de "datos vivos" para las tarjetas de concepto ---
-function liveDirtSummary(prof) {
-    const llm = prof.llmprep, prep = prof.preprolab;
-    if (!llm && !prep) return liveHint();
-    let noisy = 0, nulls = 0;
-    if (llm) noisy = (llm.docs || 0) - (llm.clean_docs || 0);
-    if (prep) for (const t of Object.values(prep))
-        for (const c of Object.values(t.columns || {})) nulls += c.nulls || 0;
-    return `<span class="cc-live-num">${noisy.toLocaleString('es')}</span> docs con ruido en tu corpus ·
-            <span class="cc-live-num">${nulls.toLocaleString('es')}</span> valores perdidos en tu flota de robots`;
-}
-
-function liveInfra(infra) {
-    const i = infra.infra; if (!i) return liveHint();
-    const chip = (o, name) => `<span class="cc-chip ${o?'up':'down'}">${dot(o)}${name}</span>`;
-    return `${chip(i.mongodb.online, "MongoDB")} ${chip(i.neo4j.online, "Neo4j")}
-            ${i.neo4j.online ? `<a href="${i.neo4j.browser}" target="_blank" style="color:#38bdf8">abrir grafo ↗</a>` : ''}`;
-}
-
-function liveLayers(infra, prof) {
-    const d = infra.data || {};
-    const row = (key, name) => {
-        const s = d[key] || {};
-        const mark = ok => ok ? '<span style="color:#34d399">✓</span>' : '<span style="color:#64748b">·</span>';
-        return `<div class="cc-layer"><span>${name}</span>
-            <span>${mark(s.seeded)} raw ${mark(s.has_silver)} silver ${mark(s.has_gold)} gold</span></div>`;
-    };
-    return row('sociallab','SocialLab') + row('preprolab','PreproLab') + row('llmprep','LLM Lab');
-}
-
-function liveNoise(prof) {
-    const llm = prof.llmprep;
-    if (!llm || !llm.noise_types) return liveHint();
-    const chips = Object.entries(llm.noise_types)
-        .sort((a,b) => b[1]-a[1]).slice(0,7)
-        .map(([k,v]) => `<span class="cc-chip"><b>${v}</b> ${k}</span>`).join("");
-    return `En tu corpus ahora mismo: ${chips}`;
-}
-
 function liveHint() {
     return `<span class="muted">Genera datos y corre el ETL en <a href="#" onclick="showView('status');return false" style="color:#38bdf8">Estado</a> para ver esto con tus propios datos.</span>`;
-}
-
-function practiceLink(p) {
-    if (!p) return "";
-    if (p.href) return `<a class="cc-go" href="${p.href}" target="_blank">${p.label} →</a>`;
-    return `<a class="cc-go" href="#" onclick="showView('${p.view}');return false">${p.label} →</a>`;
 }
 
 // --- Frescura del perfil (mtime del _profile.json) ---
@@ -355,120 +464,52 @@ async function learnFlag(btn, app, flag, block) {
     btn.disabled = false;
 }
 
-function conceptCard(c, ctx) {
-    let drill = "";
-    const parts = [];
-    if (c.more) parts.push(`<div class="cc-lesson">${c.more}</div>`);
-    if (c.radiografia) parts.push(`<div class="cc-rx">${radiografia(ctx.P, ctx.gen)}</div>`);
-    if (c.blocksOf) parts.push(conceptBlocks(ctx.app[c.blocksOf], ctx.flags, c.flagFilter));
-    if (parts.length) {
-        drill = `<details class="cc-more"><summary>Ampliar</summary><div class="cc-more-body">${parts.join("")}</div></details>`;
-    }
-    return `<div class="concept-card" style="--accent:${c.color}">
-        <div class="cc-head"><span class="cc-num">${c.n}</span><span class="cc-tag">${c.tag}</span></div>
-        <h3 class="cc-title">${c.title}</h3>
-        <p class="cc-what">${c.what}</p>
-        <div class="cc-idea"><span class="cc-idea-k">IDEA CLAVE</span> ${c.idea}</div>
-        ${c.live ? `<div class="cc-live">${c.live}</div>` : ""}
-        ${drill}
-        ${practiceLink(c.practice)}
-    </div>`;
-}
-
 async function renderLearn() {
     const el = document.getElementById("content");
-    el.innerHTML = "<div class='loading'>preparando la introducción...</div>";
-    const [cat, infra, prof, flagsResp] = await Promise.all([
-        getCatalog(), safeJSON("/api/hub/infra"), safeJSON("/api/hub/profiles"), safeJSON("/api/hub/flags"),
+    el.innerHTML = "<div class='loading'>consultando tus datos...</div>";
+    const [cat, prof, flagsResp] = await Promise.all([
+        getCatalog(), safeJSON("/api/hub/profiles"), safeJSON("/api/hub/flags"),
     ]);
     const P = (prof && prof.profiles) || {};
     const gen = (prof && prof.generated_at) || {};
     const flags = (flagsResp && flagsResp.flags) || {};
-    const app = {};
-    cat.apps.forEach(a => app[a.key] = a);
-    const url = k => (app[k] || {}).url_public || "#";
-    const ctx = { app, flags, P, gen };
 
-    const concepts = buildConcepts(ctx, infra, url);
+    const bloquesPorApp = cat.apps.map(a =>
+        `<div class="ap-app"><h3 style="color:${a.color}">${a.name}</h3>
+         ${conceptBlocks(a, flags)}</div>`).join("");
 
     el.innerHTML = `
-        <div class="hero" style="padding-bottom:20px">
-            <h1>La asignatura en ${concepts.length} ideas</h1>
-            <p>De los datos en crudo al modelo entrenado. Cada idea te lleva al laboratorio donde se trabaja, y varias las verás con <strong>tus propios datos</strong>, no con ejemplos de pizarra.</p>
+        <div class="hero" style="padding-bottom:18px">
+            <h1>Cómo funciona este laboratorio</h1>
+            <p>La materia está en el <a href="#home" style="color:#38bdf8">temario</a>, un tema por
+            página. Aquí queda lo que no es materia: cómo están hechos los ejercicios y qué aspecto
+            tienen tus datos ahora mismo.</p>
         </div>
-        <div class="concept-grid">${concepts.map(c => conceptCard(c, ctx)).join("")}</div>
+
+        <h2 class="tb-h">Tus datos, ahora mismo</h2>
+        <p class="muted" style="margin-bottom:14px">Lo que el ETL encontró en tu copia. No son
+        ejemplos de pizarra: es lo que vas a tener delante al hacer los ejercicios.</p>
+        <div class="app-section">${radiografia(P, gen)}</div>
+
+        <h2 class="tb-h" style="margin-top:26px">Ejercicio o solución: mandas tú</h2>
+        <div class="app-section">
+            <p>Cada algoritmo está dos veces: el hueco a rellenar (<code>_ex.py</code>, con un
+            <code>NotImplementedError</code>) y la solución. Un flag decide cuál se sirve, sin tocar
+            el código y sin rebuild: basta un reinicio de tres segundos.</p>
+            <p class="muted" style="margin-top:8px">Empiezas con el ejercicio en blanco; cuando lo
+            implementas, la tarjeta de la app se enciende sola. Y si prefieres estudiar la solución
+            primero, la destapas: es tu copia.</p>
+            <p class="muted" style="margin-top:8px">Si un bloque aparece como <em>sin solución</em>,
+            es que esa solución todavía no está en tu copia. Se publican al cerrar cada entrega.</p>
+        </div>
+
+        <h2 class="tb-h" style="margin-top:26px">Los bloques de cada laboratorio</h2>
+        <div class="ap-apps">${bloquesPorApp}</div>
+
         <p class="muted" style="text-align:center;margin-top:26px">
-            ¿Listo para empezar? <a href="#onboarding" style="color:#38bdf8">Primeros pasos →</a> ·
+            <a href="#home" style="color:#38bdf8">← Volver al temario</a> ·
             <a href="#arch" style="color:#38bdf8">Cómo encaja todo →</a>
         </p>`;
-}
-
-// Fuente única de los conceptos: los usan Aprende (completos) y la
-// portada (en versión resumida). Definirlos dos veces era garantía de
-// que acabaran diciendo cosas distintas.
-function buildConcepts(ctx, infra, url) {
-    const { app, P } = ctx;
-    return [
-        { n:1, color:"#38bdf8", tag:"Punto de partida", title:"Datos masivos = datos sucios a escala",
-          what:"Los datos reales no vienen limpios: faltan campos, se repiten registros, las fechas aparecen en cinco formatos y hay demasiados para abrirlos en Excel.",
-          idea:"Nadie va a tener datos limpios en su carrera. Aprender a arreglarlos es de lo que va todo esto.",
-          live: liveDirtSummary(P) },
-        { n:2, color:"#10b981", tag:"Almacenamiento", title:"Persistencia poliglota",
-          what:"Ninguna base es buena en todo, así que aquí conviven dos: MongoDB para documentos que cambian de forma y Neo4j para las relaciones entre ellos.",
-          idea:"Pídele a Mongo el camino más corto entre dos usuarios, o sus comunidades, y sufrirás. Neo4j lo resuelve en una línea de Cypher.",
-          more:"MongoDB guarda cada usuario como un documento JSON, y dos usuarios pueden tener campos distintos sin migrar nada. Neo4j guarda lo mismo pero como nodos y aristas, y ahí las preguntas cambian de naturaleza: «¿a quién sigue la gente que sigue a X?» es un recorrido de grafo, no una tabla con JOINs. Por eso conviven las dos.",
-          blocksOf:"sociallab", flagFilter:"LAB_NEO4J",
-          live: liveInfra(infra), practice:{label:"Practica en SocialLab", href:url('sociallab')} },
-        { n:3, color:"#fbbf24", tag:"Ingeniería de datos", title:"El ciclo de vida del dato: raw → silver → gold",
-          what:"El data lake se organiza en tres capas: <b>raw</b> es lo que llega tal cual, <b>silver</b> ya está limpio y normalizado, y <b>gold</b> está agregado y listo para consumir.",
-          idea:"raw es materia prima, gold es lo servible. Entre medias no se tira nada: cada capa se apoya en la de antes.",
-          more:"raw se escribe una vez y no se toca: es tu copia fiel de lo que llegó, con su suciedad incluida. silver aplica la limpieza y fija tipos estables. gold agrega y da forma a lo que consume la app o el modelo. Si algo sale raro más adelante, siempre puedes volver a raw y rehacer el pipeline entero.",
-          live: liveLayers(infra, P), practice:{label:"Mira la arquitectura", view:"arch"} },
-        { n:4, color:"#e75a9c", tag:"Procesamiento", title:"ETL con Spark",
-          what:"El pipeline que lleva de raw a gold. Lo escribes en PySpark y corre igual en tu portátil que en un cluster de Databricks: mismo código, distinta escala.",
-          idea:"Si el ETL está mal, la app enseña basura, por bonita que sea la interfaz.",
-          more:"El ETL es código, no clics: cada transformación queda escrita y se puede volver a ejecutar tal cual. En local corres PySpark sobre tu máquina; cuando el volumen crece, el mismo script se lanza en un cluster sin reescribirlo. Cambia la escala, no la lógica.",
-          practice:{label:"Corre el ETL en Estado", view:"status"} },
-        { n:5, color:"#a855f7", tag:"Calidad de datos", title:"La suciedad, catalogada",
-          what:"Cada problema tiene su nombre: fechas en cinco formatos, encoding roto, duplicados, referencias huérfanas, ruido en las etiquetas, PII, casi-duplicados…",
-          idea:"Antes de arreglar nada hay que saber qué tienes delante. A cada tipo de suciedad le toca una técnica distinta.",
-          more:"Ninguna de estas suciedades es casual: el generador de datos las inyecta a propósito para que aprendas a detectarlas y a medir cuánta hay. Esta es la radiografía de lo que tienes ahora mismo en tus datos:",
-          radiografia:true, blocksOf:"llmprep",
-          live: liveNoise(P), practice:{label:"Detéctala en LLM Lab", href:url('llmprep')} },
-        { n:6, color:"#1d9bf0", tag:"Tema 5", title:"Preprocesamiento sistemático",
-          what:"El Tema 5 al completo: valores perdidos (media, KNN, K-Means), outliers, normalización, discretización y reducción de dimensiones e instancias.",
-          idea:"Para cada decisión hay un criterio, y una forma de comprobar si el cambio mejoró el modelo o solo lo movió de sitio.",
-          more:"PreproLab trabaja sobre una flota de robots con mantenimiento predictivo: cuatro tablas con catorce problemas plantados a mano (nulls MCAR/MAR/MNAR, outliers, ruido en las etiquetas, duplicados, fechas en varios formatos, columnas redundantes…). Recorres las técnicas del tema en orden y, al final, el Pipeline Studio te deja componer tu propio preprocesamiento y ver qué modelo sale mejor.",
-          blocksOf:"preprolab",
-          practice:{label:`PreproLab · ${(app.preprolab||{}).exercises||37} ejercicios`, href:url('preprolab')} },
-        { n:7, color:"#34d399", tag:"Modelado", title:"Machine Learning sobre los datos",
-          what:"Con los datos ya limpios entrenas los modelos: supervisados (spam, churn), no supervisados (clustering) y sobre grafo (a quién seguir).",
-          idea:"Ojo con el churn_predictor: lleva una fuga de datos puesta a propósito, para que aprendas a oler cuándo un modelo es sospechosamente bueno.",
-          more:"Seis modelos en tres familias. Supervisado: predecir spam, engagement o abandono a partir de ejemplos etiquetados. No supervisado: agrupar usuarios parecidos sin decirle antes cuántos grupos hay. Sobre grafo: recomendar a quién seguir usando la forma de la red, no solo el contenido.",
-          blocksOf:"sociallab", flagFilter:"LAB_ML",
-          practice:{label:"SocialLab · 6 modelos", href:url('sociallab')} },
-        { n:8, color:"#a78bfa", tag:"IA / LLMs", title:"Preparar datos para modelos de lenguaje",
-          what:"Un modelo de lenguaje se entrena con un corpus. Prepararlo es limpiarlo, quitar duplicados (MinHash/LSH), tokenizarlo (BPE) y comprobar que ha quedado mejor.",
-          idea:"El mismo modelo, con el corpus sucio y con el limpio: la perplejidad baja. No cambió el modelo, cambiaron los datos.",
-          more:"LLM Lab parte de un corpus tipo Wikipedia en español, sucio a propósito. Lo limpias (encoding, HTML, idioma, PII), le quitas los casi-duplicados con MinHash/LSH y guardas el parecido como grafo en Neo4j, lo tokenizas con un BPE hecho a mano y entrenas un modelo pequeño. La demo final entrena el mismo modelo con el corpus sucio y con el limpio para que veas la diferencia.",
-          blocksOf:"llmprep",
-          practice:{label:"LLM Lab · corpus", href:url('llmprep')} },
-        { n:9, color:"#f59e0b", tag:"Tiempo real", title:"Cuando los datos no paran de llegar",
-          what:"Todo lo anterior es batch: coges un lote, lo procesas entero y guardas. En streaming los datos siguen llegando mientras respondes, así que no puedes esperar a tenerlo todo ni volver atrás a releerlo.",
-          idea:"Una respuesta correcta que llega tarde es otra forma de estar equivocada. Aquí se decide cuánto esperas antes de contestar.",
-          more:"StreamLab retoma la flota de robots de PreproLab, pero emitiendo en vivo. Aparecen problemas que en batch ni existen: lecturas que llegan desordenadas, relojes desajustados, robots que se callan sin avisar y duplicados porque el emisor reintenta. Se trabaja con ventanas temporales, watermarks para decidir hasta cuándo esperas a un dato tardío, y estado incremental que agrega sin releer el histórico.",
-          blocksOf:"streamlab",
-          practice:{label:"StreamLab · centro de control", href:url('streamlab')} },
-        { n:10, color:"#7dd3fc", tag:"Buenas prácticas", title:"Reproducibilidad y gobernanza",
-          what:"Toda la lógica de transformación vive en el ETL, versionado en git, no en pasos manuales que nadie recuerda. Se puede regenerar todo desde cero.",
-          idea:"Si no puedes reconstruir un dato desde su origen, no lo controlas: lo estás improvisando.",
-          more:"Versionar el ETL en git significa que el dato no depende de que alguien recuerde qué tocó a mano un martes por la tarde. Cualquiera clona el repo, ejecuta el pipeline y obtiene exactamente lo mismo. Eso es lo que separa un análisis que se sostiene de uno que no se puede repetir." },
-        { n:11, color:"#f472b6", tag:"Cómo se aprende aquí", title:"Método scaffold / solución",
-          what:"Cada algoritmo está dos veces: el hueco a rellenar (scaffold, con un NotImplementedError) y la solución. Un flag decide cuál se sirve, sin tocar el código.",
-          idea:"Empiezas con el ejercicio en blanco; cuando lo implementas, la tarjeta de la app se enciende sola.",
-          more:"En cualquier concepto de arriba puedes pulsar «Ampliar» y alternar cada bloque entre solución y ejercicio tú mismo: es tu copia de la app, así que mandas tú. Ver la solución primero para estudiarla, o dejarla en blanco para pelearte con ella, lo eliges según te venga.",
-          practice:{label:"Cómo funciona Quasar", view:"arch"} },
-    ];
 }
 
 // ============================================================

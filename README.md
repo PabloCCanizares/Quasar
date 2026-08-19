@@ -20,21 +20,28 @@ El `tour` levanta el ecosistema entero y genera los datos. Tarda dos o tres
 minutos la primera vez. Cuando termine, abre <http://localhost:8080>: esa es
 la puerta de entrada y el único puerto que necesitas recordar.
 
-Ahí verás el temario del curso: once temas repartidos en cuatro unidades, con
-lo que vas a saber al terminar cada uno y cuánto trabajo lleva. Empieza por
-donde toque en clase, o de arriba abajo si vas por libre.
+Ahí verás el temario del curso, siguiendo la guía docente. Cada tema dice qué
+vas a saber al terminarlo y cuánto trabajo lleva. Empieza por donde toque en
+clase, o de arriba abajo si vas por libre.
 
 ## Qué vas a aprender
 
-El curso recorre el camino completo del dato, y cada tramo tiene su
-laboratorio:
+El temario sigue el programa de la guía docente. Cada tema dice cuánto trabajo
+lleva y qué vas a saber al terminarlo:
 
-| Unidad | Pregunta | Dónde se practica |
+| Unidad | Temas | Dónde se practica |
 |---|---|---|
-| **Obtener** | ¿De dónde salen los datos? | teoría |
-| **Almacenar** | ¿Dónde los pongo y por qué ahí? | SocialLab |
-| **Preparar** | ¿Cómo los dejo utilizables? | PreproLab · LLM Lab |
-| **Explotar** | ¿Qué saco de ellos? | SocialLab · StreamLab |
+| **Sistemas de datos masivos** | Qué hace masivo a un dato | teoría |
+| **Adquisición y almacenamiento** | Fuentes y formatos · Captura (scraping e interfaces) · Almacenamiento NoSQL · Computación distribuida | teoría · Práctica 1 · SocialLab |
+| **Análisis exploratorio** | EDA en datos masivos | PreproLab |
+| **Preprocesamiento y limpieza** | Limpieza · Integración · Transformación · Reducción | PreproLab |
+
+Son **28 horas** de trabajo estimado sobre el programa. Los temas que no tienen
+laboratorio traen una lección corta en el Hub y remiten a los apuntes de clase.
+
+Aparte, hay una unidad de **ampliación** con material que va más allá del
+programa —datos para modelos de lenguaje, procesamiento en tiempo real y
+machine learning— marcada como tal para que sepas qué entra y qué no.
 
 Los cuatro laboratorios:
 
@@ -42,10 +49,10 @@ Los cuatro laboratorios:
 |---|---|---|
 | [**SocialLab**](apps/sociallab/README.md) | `:8000` | Una red social que cerró y hay que migrar. MongoDB, Neo4j y seis modelos de ML. |
 | [**LLM Lab**](apps/llmprep/README.md) | `:8001` | Un corpus sucio que hay que dejar listo para entrenar un modelo de lenguaje. |
-| [**PreproLab**](apps/preprolab/README.md) | `:8002` | Una flota de robots con catorce problemas plantados a propósito. El Tema 5 entero. |
+| [**PreproLab**](apps/preprolab/README.md) | `:8002` | Una flota de robots con catorce problemas plantados a propósito. |
 | [**StreamLab**](apps/streamlab/README.md) | `:8003` | Un robot ardió porque el aviso llegó tarde. Ahora los datos se procesan en vivo. |
 
-**91 ejercicios** en total, unas 32 horas de trabajo.
+**91 ejercicios** en total.
 
 ## Cómo se trabaja
 
