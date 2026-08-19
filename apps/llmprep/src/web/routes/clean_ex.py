@@ -73,6 +73,14 @@ async def fix_encoding_endpoint() -> dict:
                "Ã±": "ñ", "Ã¼": "ü", "Â¿": "¿", "Â¡": "¡"}.
       - Cuenta cuántos docs cambian tras aplicar el fix.
       - El ground truth está en d["_noise"] (lista con 'broken_encoding').
+
+    Compruebalo:
+      - El corpus lleva un campo `_noise` con la verdad: los documentos que
+        traen 'broken_encoding' son los que deberias haber tocado. Cuenta los
+        modificados y compara.
+      - Reparar no cambia el numero de documentos, solo su contenido.
+      - Un texto ya correcto no debe salir modificado: si tu contador se
+        acerca al total del corpus, estas reescribiendo texto sano.
     """
     return _exercise_placeholder("CLEAN-1", "Repara mojibake con un mapa de sustitución Ã¡→á, etc.")
 
@@ -94,6 +102,14 @@ async def strip_html_endpoint() -> dict:
       - Usa re.sub con flags=re.DOTALL para los <ref> multilinea.
       - Para [[a|b]] conserva el grupo 2: re.sub(r"\\[\\[[^\\]|]+\\|([^\\]]+)\\]\\]", r"\\1", t).
       - Normaliza espacios al final (\\n{3,} → \\n\\n).
+
+    Compruebalo:
+      - Contrasta con los documentos marcados como 'html_residual' y
+        'boilerplate' en `_noise`.
+      - Los textos limpios tienen que quedar mas cortos, nunca mas largos.
+      - Ningun documento deberia quedarse vacio del todo: si alguno se queda
+        a cero, tu expresion regular se esta comiendo el contenido bueno
+        ademas de las etiquetas.
     """
     return _exercise_placeholder("CLEAN-2", "Elimina <ref>/{{cite}}/[[wikilinks]]/boilerplate con regex.")
 
@@ -112,6 +128,13 @@ async def length_filter_endpoint(
     Pistas:
       - len(d["text"]) < min_chars → too short.
       - len(d["text"]) > max_chars → too long.
+
+    Compruebalo:
+      - Los descartados tienen que solaparse con los marcados 'too_short' y
+        'too_long' en `_noise`.
+      - Todo lo que sobrevive tiene que estar dentro de los limites que
+        pusiste: comprobarlo es inmediato y delata errores de comparacion.
+      - Sube el minimo y solo pueden descartarse mas documentos, nunca menos.
     """
     return _exercise_placeholder("CLEAN-3", "Filtra docs por longitud [min_chars, max_chars].")
 
@@ -129,6 +152,14 @@ async def language_filter_endpoint(target_lang: str = Query("es")) -> dict:
       - EN stopwords: the, of, and, to, in, is, that, for, with, this, ...
       - words = re.findall(r"\\b\\w+\\b", text.lower()).
       - Devuelve precision/recall contra ground truth 'wrong_lang'.
+
+    Compruebalo:
+      - Contrasta con los marcados 'wrong_lang'.
+      - Ninguna deteccion es perfecta: es normal que se cuelen algunos y que
+        descartes alguno bueno. Mide precision y recall en vez de esperar el
+        100%.
+      - Si descartas mas de la mitad del corpus, el umbral esta demasiado
+        exigente: la mayoria de los documentos SI estan en espanol.
     """
     return _exercise_placeholder("CLEAN-4", "Detecta idioma por stopwords ES vs EN. Descarta los no-target.")
 
@@ -144,6 +175,14 @@ async def pii_removal_endpoint() -> dict:
       - Email: r"\\b[\\w.+-]+@[\\w-]+\\.[\\w.-]+\\b".
       - Teléfono: r"\\+?\\d[\\d\\s]{7,}\\d".
       - Cuenta cuántas redacciones haces en total.
+
+    Compruebalo:
+      - Contrasta con los marcados 'pii'.
+      - El documento tiene que conservar su longitud aproximada: se sustituye
+        el dato, no se borra el parrafo.
+      - Pasa el detector otra vez sobre el resultado: no deberia encontrar
+        nada. Si sigue encontrando, tu sustitucion no cubre todos los
+        formatos.
     """
     return _exercise_placeholder("CLEAN-5", "Tacha emails ([EMAIL]) y teléfonos ([TELEFONO]) con regex.")
 
@@ -164,5 +203,14 @@ async def pipeline_endpoint(
       - Reutiliza las funciones de CLEAN-1..5.
       - El orden importa: arregla encoding ANTES de detectar idioma.
       - El corpus resultante alimenta el bloque dedup.
+
+    Compruebalo:
+      - El corpus final tiene que ser menor que el de partida, y la reduccion
+        parecerse al total de documentos con ruido de `_noise`.
+      - El orden importa: reparar el encoding ANTES de detectar idioma evita
+        descartar textos que solo estaban mal codificados. Prueba a
+        invertirlo y mira cuantos pierdes de mas.
+      - Mide precision y recall contra `_noise`: es la unica forma de saber
+        si tu pipeline acierta o simplemente borra mucho.
     """
     return _exercise_placeholder("CLEAN-6", "Aplica las 5 técnicas en orden y mide la reducción total.")

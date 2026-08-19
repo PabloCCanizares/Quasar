@@ -62,6 +62,15 @@ async def pca(
       - PCA() sin args → todos los componentes; PCA(n) → primeros n.
       - cum_var = np.cumsum(pca.explained_variance_ratio_).
       - np.searchsorted(cum_var, 0.95) + 1 = primer k con ≥95%.
+
+    Compruebalo:
+      - La varianza explicada acumulada tiene que ser creciente y terminar
+        cerca de 1 si coges todas las componentes.
+      - Cada componente explica menos que la anterior, por construccion. Si
+        no van en orden decreciente, algo esta desordenado.
+      - Las componentes nunca pueden ser mas que las columnas de entrada.
+      - Con columnas muy correlacionadas (el seed mete varias), las primeras
+        componentes deberian concentrar casi toda la varianza.
     """
     return _exercise_placeholder(
         "REDDIM-1",
@@ -95,6 +104,13 @@ async def tsne(
       - sklearn.manifold.TSNE(n_components=2, perplexity, init="pca").
       - Si len(X) > max_rows, muestrear con rng.choice(replace=False).
       - kl_divergence_ es atributo del modelo entrenado.
+
+    Compruebalo:
+      - t-SNE no conserva distancias globales: no interpretes lo lejos que
+        estan dos grupos, solo que se agrupen.
+      - Cambiar la perplejidad cambia el dibujo, y eso es normal.
+      - Si te sale una nube uniforme sin ninguna estructura, comprueba que
+        estas escalando antes: t-SNE es muy sensible a la escala.
     """
     return _exercise_placeholder(
         "REDDIM-2",
@@ -132,6 +148,14 @@ async def filter_method(
       - chi² requiere features no negativas → MinMaxScaler antes.
       - Pearson con un binario: |df[c].corr(pd.Series(y))|.
       - Devolver ranking ordenado descendente por score.
+
+    Compruebalo:
+      - Devuelve exactamente k features, ni una mas.
+      - Las puntuaciones tienen que ir en orden decreciente.
+      - chi2 exige valores no negativos: si peta o da resultados raros, es
+        que le estas pasando datos sin escalar a positivos.
+      - Las features que el seed genera como ruido puro deberian quedar
+        abajo. Si aparecen arriba, sospecha del calculo.
     """
     return _exercise_placeholder(
         "REDDIM-3",
@@ -165,6 +189,14 @@ async def wrapper(
       - RFE(estimator, n_features_to_select=k, step=1).
       - Estandarizar antes con StandardScaler.
       - Estimator: RandomForestClassifier(n_estimators=50, max_depth=8).
+
+    Compruebalo:
+      - Devuelve exactamente k features.
+      - forward y backward no tienen por que coincidir, y no pasa nada: son
+        caminos distintos por el mismo espacio.
+      - Es mucho mas lento que filter, porque entrena un modelo por cada
+        combinacion. Si va igual de rapido, sospecha que no estas evaluando
+        de verdad.
     """
     return _exercise_placeholder(
         "REDDIM-4",
@@ -202,6 +234,13 @@ async def embedded(
       - LogisticRegression(penalty='l1', solver='saga', C=0.5, max_iter=2000).
       - Lasso: selected = features con |coef| > 0.
       - RF: importancias suman 1, threshold=0.05 es típico.
+
+    Compruebalo:
+      - Con Lasso, subir la regularizacion tiene que dejar MENOS features con
+        coeficiente distinto de cero.
+      - Las importancias de un RandomForest suman 1. Si no, no las estas
+        leyendo del modelo entrenado.
+      - Ninguna importancia puede ser negativa.
     """
     return _exercise_placeholder(
         "REDDIM-5",
@@ -239,6 +278,14 @@ async def compare(
       - Usa RFE para wrapper (más rápido que sequential).
       - Usa rf_importance para embedded (no necesita escalar igual que Lasso).
       - Consensus = features en TODAS las familias.
+
+    Compruebalo:
+      - Las tres familias no tienen por que elegir lo mismo, y ahi esta la
+        gracia del ejercicio.
+      - Pero si las features son claramente informativas, deberian coincidir
+        en buena parte. Un consenso alto es senal de que la seleccion es
+        fiable; un desacuerdo total es senal de que ninguna manda mucho.
+      - Las que descarten las tres son las que puedes tirar con tranquilidad.
     """
     return _exercise_placeholder(
         "REDDIM-6",

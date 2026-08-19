@@ -61,6 +61,14 @@ async def onehot(
       - series.value_counts() para ordenar.
       - `series.where(series.isin(top), other="OTROS")` para agrupar.
       - pd.get_dummies(series, prefix=columna, dtype=int).
+
+    Compruebalo:
+      - Las columnas nuevas tienen que ser tantas como categorias distintas
+        (o el maximo que pediste, mas la de OTROS).
+      - Cada fila tiene que sumar exactamente 1 entre todas las columnas
+        nuevas: una categoria y solo una. Si alguna suma 0 o 2, hay nulos
+        sin tratar o categorias solapadas.
+      - El numero de filas no cambia.
     """
     return _exercise_placeholder(
         "TRANS-1",
@@ -96,6 +104,14 @@ async def ordinal(
       - mapping = {v: i+1 for i, v in enumerate(order_list)}.
       - series.map(mapping) para encodear.
       - Detectar valores en la columna que NO están en el order (asignar 0).
+
+    Compruebalo:
+      - El orden que devuelve tiene que respetar el que tu le has dado, no el
+        alfabetico. Es el fallo tipico: pandas ordena solo si le dejas.
+      - Todo valor que no este en tu lista deberia quedar como nulo o
+        marcado: si se te cuela con un numero, estas asignando codigos a
+        ciegas.
+      - Los codigos tienen que ser consecutivos y sin huecos.
     """
     return _exercise_placeholder(
         "TRANS-2",
@@ -134,6 +150,14 @@ async def multivalued(
       - vocab = sorted({union de todos los parts}).
       - Para crear flags: int(v in row) por cada v del vocab.
       - cardinality = nº de items por fila (lista de longitudes).
+
+    Compruebalo:
+      - Los flags generados tienen que ser tantos como valores distintos
+        aparezcan en toda la columna, no tantos como valores tenga una fila.
+      - La media de flags activos por fila tiene que parecerse al numero de
+        elementos que el seed mete en cada lista; si sale 1, no estas
+        separando por el separador.
+      - Ningun flag puede valer otra cosa que 0 o 1.
     """
     return _exercise_placeholder(
         "TRANS-3",
@@ -175,6 +199,16 @@ async def discretize(
       - MDLP: recursivamente, en cada segmento buscar el split que
         maximiza la ganancia de información (entropía total - entropía
         ponderada por mitad). Aplicar criterio MDL para parar.
+
+    Compruebalo:
+      - Los bordes tienen que ir en orden creciente y cubrir todo el rango:
+        el primero por debajo del minimo, el ultimo por encima del maximo.
+      - Con equal_width los intervalos miden lo mismo; con equal_freq lo que
+        se parece es la CANTIDAD de elementos de cada uno. Comprueba cual
+        estas consiguiendo.
+      - MDLP mira el target, asi que sus cortes deberian caer donde cambia la
+        proporcion de la clase. El seed mete un umbral claro en la variable
+        objetivo: si MDLP funciona, un corte deberia aparecer cerca.
     """
     return _exercise_placeholder(
         "TRANS-4",
@@ -207,6 +241,14 @@ async def groupby(
       - df.groupby(by)[agg_col].agg(agg) para mean/sum/min/max/median/std
         (requiere numérica).
       - sort_values(ascending=False).head(50) para top 50.
+
+    Compruebalo:
+      - El resultado tiene tantas filas como valores distintos tenga la
+        columna de agrupacion.
+      - Con 'sum', sumar todos los grupos tiene que dar el total de la
+        columna original. Es la comprobacion mas rapida.
+      - Con 'mean', ningun grupo puede quedar fuera del rango [min, max] de
+        los datos originales.
     """
     return _exercise_placeholder(
         "TRANS-5",

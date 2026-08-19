@@ -769,6 +769,146 @@ llmprep_cmd() {
 }
 
 # ==========================================================
+# StreamLab
+# ==========================================================
+
+STREAMLAB_SERVICE="app-streamlab"
+STREAMLAB_VALID_BLOCKS=(windows late state)
+
+streamlab_restart_app() {
+    log "Recreando el contenedor '$STREAMLAB_SERVICE' para recoger nuevos flags..."
+    compose up -d "$STREAMLAB_SERVICE"
+    ok "Listo. Recarga http://localhost:8003"
+}
+
+update_flag_streamlab() {
+    local action="$1" block="$2"
+    python3 - "$action" "$block" "$ENV_FILE" <<'PYEOF'
+import re, sys
+action, block, env_file = sys.argv[1:4]
+ALL = {"windows", "late", "state"}
+with open(env_file) as f:
+    content = f.read()
+m = re.search(r'^LAB_STREAMLAB=(.*)$', content, re.MULTILINE)
+current = m.group(1).strip() if m else ""
+blocks = set(ALL) if current == "all" else {b.strip() for b in current.split(",") if b.strip()}
+if action == "unlock":
+    if block not in ALL:
+        sys.stderr.write(f"Bloque desconocido: {block}. Validos: {sorted(ALL)}\n"); sys.exit(2)
+    blocks.add(block)
+elif action == "lock":
+    blocks.discard(block)
+elif action == "all":
+    blocks = set(ALL)
+elif action == "none":
+    blocks = set()
+else:
+    sys.stderr.write(f"Action desconocida: {action}\n"); sys.exit(2)
+new_value = ",".join(sorted(blocks))
+content = re.sub(r'^LAB_STREAMLAB=.*$', f'LAB_STREAMLAB={new_value}', content, flags=re.MULTILINE)
+with open(env_file, "w") as f:
+    f.write(content)
+print(new_value if new_value else "(empty)")
+PYEOF
+}
+
+streamlab_usage() {
+    cat <<EOF
+StreamLab — comandos disponibles (Fase 1: esqueleto)
+
+Ciclo de vida:
+    up                           Arranca app-streamlab + dependencias.
+    down                         Para SOLO app-streamlab.
+    status                       Estado de los flags y servicios.
+    restart                      Reinicia el contenedor.
+    logs                         Sigue logs de app-streamlab.
+
+Modo laboratorio (flags en infra/compose/.env.docker):
+    unlock <bloque>              Desbloquea un bloque.
+    lock   <bloque>              Vuelve a esconderlo (scaffold).
+    solutions / exercises        Toggle masivo.
+  Bloques: windows | late | state
+
+Pipeline:
+    emit [--lotes N] [--intervalo S]
+                                 Emite telemetria de la flota en micro-lotes.
+                                 --intervalo pone ritmo real (para verlo en vivo).
+
+Web StreamLab: http://localhost:8003
+EOF
+}
+
+streamlab_cmd() {
+    local cmd="${1:-help}"
+    shift || true
+    case "$cmd" in
+        up)
+            ensure_docker
+            log "Arrancando StreamLab..."
+            compose up -d --build "$STREAMLAB_SERVICE"
+            ok "Web: http://localhost:8003"
+            ;;
+        down|stop)
+            ensure_docker
+            log "Parando StreamLab (mongo sigue vivo)..."
+            compose stop "$STREAMLAB_SERVICE"
+            ;;
+        restart)
+            ensure_docker
+            streamlab_restart_app
+            ;;
+        status)
+            echo
+            log "Estado del flag LAB_STREAMLAB ($ENV_FILE):"
+            grep -E '^LAB_STREAMLAB=' "$ENV_FILE" | sed 's/^/    /'
+            echo
+            ensure_docker
+            compose ps 2>/dev/null | sed 's/^/    /' || warn "Compose no esta corriendo"
+            echo
+            ;;
+        unlock)
+            local block="${1:-}"
+            if [[ -z "$block" ]]; then
+                err "Uso: ./lab.sh streamlab unlock <bloque>"
+                echo "  Bloques: ${STREAMLAB_VALID_BLOCKS[*]}"; exit 1
+            fi
+            new=$(update_flag_streamlab unlock "$block"); ok "LAB_STREAMLAB = $new"
+            ensure_docker; streamlab_restart_app
+            ;;
+        lock)
+            local block="${1:-}"
+            if [[ -z "$block" ]]; then err "Uso: ./lab.sh streamlab lock <bloque>"; exit 1; fi
+            new=$(update_flag_streamlab lock "$block"); ok "LAB_STREAMLAB = $new"
+            ensure_docker; streamlab_restart_app
+            ;;
+        solutions)
+            update_flag_streamlab all "" > /dev/null; ok "Todo desbloqueado: LAB_STREAMLAB=all"
+            ensure_docker; streamlab_restart_app
+            ;;
+        exercises)
+            update_flag_streamlab none "" > /dev/null; ok "Todo en modo ejercicio (scaffold)"
+            ensure_docker; streamlab_restart_app
+            ;;
+        logs)
+            ensure_docker; compose logs -f "$STREAMLAB_SERVICE"
+            ;;
+        emit)
+            ensure_docker
+            log "Emitiendo telemetria de la flota (micro-lotes en raw/)..."
+            log "  Output: infra/data/streamlab/raw/lote-*.json"
+            compose exec "$STREAMLAB_SERVICE" python -m src.seed.emit_telemetry "$@"
+            ok "Emision lista. Manifiesto en raw/_emision.json"
+            ;;
+        help|--help|-h|"")
+            streamlab_usage
+            ;;
+        *)
+            err "Comando desconocido: $cmd"; streamlab_usage; exit 1
+            ;;
+    esac
+}
+
+# ==========================================================
 # Quasar Hub (app central :8080)
 # ==========================================================
 
@@ -973,6 +1113,8 @@ Apps disponibles:
 
     llmprep      Limpieza de corpus para LLMs (LLM Lab) — completa.
                  Bloques: clean, dedup, tokenize, train. 18 ejercicios.
+    streamlab    Datos en tiempo real (StreamLab) — en construccion.
+                 Bloques: windows, late, state. 18 ejercicios.
 
 Comandos globales (afectan a TODAS las apps):
     tour                         Arranca el ecosistema completo + seed + ETL.
@@ -1018,6 +1160,9 @@ case "$app" in
         ;;
     llmprep)
         llmprep_cmd "$@"
+        ;;
+    streamlab)
+        streamlab_cmd "$@"
         ;;
     hub)
         hub_cmd "$@"

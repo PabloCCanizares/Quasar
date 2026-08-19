@@ -41,18 +41,28 @@ _unlocked_blocks = _unlocked()
 # directamente (no el módulo gateado), así que funciona aunque clean siga
 # como scaffold. En la distribución sin soluciones no existe ninguno de los
 # dos ficheros y ambos caen al scaffold.
+# Qué se sirve de verdad, que no siempre coincide con el flag: si la solución
+# no está en disco (copia de alumnos), import_block cae al scaffold aunque el
+# flag diga lo contrario. El estado refleja la realidad, no la intención.
+_served_solution: dict[str, bool] = {}
+
 for _block in BLOCKS:
-    router.include_router(
-        import_block("src.web.routes", _block, _block in _unlocked_blocks).router
-    )
+    _mod = import_block("src.web.routes", _block, _block in _unlocked_blocks)
+    router.include_router(_mod.router)
+    _served_solution[_block] = not _mod.__name__.endswith("_ex")
 
 
 @router.get("/api/llmprep/lab/status")
 async def lab_status():
-    """Estado actual del laboratorio: qué bloques están desbloqueados."""
+    """Estado actual del laboratorio: qué bloques sirven solución.
+
+    `blocks` dice qué se sirve realmente; `flagged` qué pide el flag. Cuando
+    difieren es que la solución no está disponible en esta copia.
+    """
     return {
         "app": "llmprep",
-        "blocks": {b: (b in _unlocked_blocks) for b in BLOCKS},
+        "blocks": dict(_served_solution),
+        "flagged": {b: (b in _unlocked_blocks) for b in BLOCKS},
         "phase": 12,
         "note": "Esqueleto inicial. Bloques (clean, dedup, tokenize, train) en construcción.",
     }

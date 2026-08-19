@@ -67,6 +67,15 @@ async def detect_iqr(
       - series.quantile(0.25) y series.quantile(0.75).
       - mask = (df[col] < lower) | (df[col] > upper).
       - boxplot_data tiene min/max RAW pero whiskers = bounds.
+
+    Compruebalo:
+      - lower siempre menor que upper, y la mediana tiene que caer entre los
+        dos. Si no, has cambiado Q1 por Q3.
+      - Sube el multiplicador: los outliers detectados solo pueden bajar.
+        Si suben, el signo de alguna cota esta invertido.
+      - El seed inyecta temperaturas absurdas de 1000 grados: con el
+        multiplicador clasico de 1.5 tienen que salir todas. Si no aparece
+        ninguna, no estas mirando la columna correcta.
     """
     return _exercise_placeholder(
         "OUTLIERS-1",
@@ -105,6 +114,14 @@ async def detect_zscore(
       - z_scores = (df[col] - mean) / std.
       - mask = z_scores.abs() > threshold.
       - Recuerda excluir nulls antes del cálculo.
+
+    Compruebalo:
+      - Z-score detecta menos que IQR sobre los mismos datos, porque la media
+        y la desviacion ya vienen infladas por los propios outliers. Que te
+        salgan menos es la respuesta correcta, no un fallo.
+      - Baja el umbral y el recuento tiene que subir, nunca al reves.
+      - Un valor absurdo aislado tendra un z enorme; si a todos les sale un z
+        parecido, no estas tipificando por columna.
     """
     return _exercise_placeholder(
         "OUTLIERS-2",
@@ -150,6 +167,14 @@ async def handle(
       - cap: series.clip(lower=lower, upper=upper)
       - log con datos negativos: shift = -min + 1 antes de log1p.
       - El histograma se construye con numpy.histogram(data, bins=30).
+
+    Compruebalo:
+      - Con 'remove' el dataset encoge; con 'cap' y 'log' mantiene todas las
+        filas. Si al capar pierdes filas, estas eliminando en vez de recortar.
+      - Tras 'cap', el maximo tiene que quedarse exactamente en la cota
+        superior, y la desviacion tipica baja mucho.
+      - 'log' exige valores positivos: si aparecen NaN, hay ceros o negativos
+        que no has tratado.
     """
     return _exercise_placeholder(
         "OUTLIERS-3",
@@ -218,6 +243,15 @@ async def noise_filter(
         binario y[i] = 1 - y[i].
       - Validation: TP = injected ∩ detected, FP = detected - injected,
         FN = injected - detected.
+
+    Compruebalo:
+      - Usa `inject_noise_pct`: al inyectar ruido conocido puedes medir
+        recall y precision de verdad, en vez de fiarte.
+      - Al pasar de conservador a agresivo (EF, CVCF, IPF) el recall tiene
+        que subir y la precision bajar. Ese intercambio es justo lo que el
+        ejercicio quiere que veas; si te sale plano, los filtros estan
+        haciendo lo mismo.
+      - Ningun filtro puede marcar mas instancias que el total del dataset.
     """
     return _exercise_placeholder(
         "OUTLIERS-4",

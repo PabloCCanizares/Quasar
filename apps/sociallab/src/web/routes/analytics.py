@@ -36,10 +36,18 @@ _neo4j_unlocked = _unlocked("LAB_NEO4J")
 
 _ROUTES = "src.web.routes"
 
+# Qué se sirve de verdad, que no siempre coincide con el flag: si la solución
+# no está en disco (copia de alumnos), import_block cae al scaffold aunque el
+# flag diga lo contrario. El estado refleja la realidad, no la intención.
+_neo4j_served: dict[str, bool] = {}
+
 # --- Bloques Cypher: solución si está desbloqueada y presente, si no scaffold ---
-router.include_router(import_block(_ROUTES, "neo4j_basic", "basic" in _neo4j_unlocked).router)
-router.include_router(import_block(_ROUTES, "neo4j_intermediate", "intermediate" in _neo4j_unlocked).router)
-router.include_router(import_block(_ROUTES, "neo4j_advanced", "advanced" in _neo4j_unlocked).router)
+for _bloque, _modulo in (("basic", "neo4j_basic"),
+                         ("intermediate", "neo4j_intermediate"),
+                         ("advanced", "neo4j_advanced")):
+    _mod = import_block(_ROUTES, _modulo, _bloque in _neo4j_unlocked)
+    router.include_router(_mod.router)
+    _neo4j_served[_bloque] = not _mod.__name__.endswith("_ex")
 
 # --- Endpoints ML (siempre incluidos; degradan si no hay parquets) ---
 from src.web.routes import ml as _ml
@@ -47,22 +55,43 @@ from src.web.routes import ml as _ml
 router.include_router(_ml.router)
 
 
+# Un modelo por bloque ML: si su módulo solución no está en disco, el bloque
+# no puede servir solución por mucho que el flag lo pida. Los modelos se
+# despachan en src/spark/models/run_all.py, no aquí, así que se comprueba la
+# presencia del fichero en vez del módulo importado.
+_ML_MODELOS = {
+    "supervised": "spam_detector",
+    "unsupervised": "user_clustering",
+    "graph_ml": "follow_recommender",
+}
+
+
+def _ml_disponible(modelo: str) -> bool:
+    import importlib.util
+    try:
+        return importlib.util.find_spec(f"src.spark.models.{modelo}") is not None
+    except (ImportError, ValueError):
+        return False
+
+
 @router.get("/api/analytics/lab/status")
 async def lab_status():
-    """Estado actual del laboratorio: que bloques estan desbloqueados.
+    """Estado actual del laboratorio: que bloques sirven solucion.
 
-    El frontend puede llamar a este endpoint al arrancar para mostrar
-    en el sidebar que partes estan en modo solucion vs ejercicio.
+    `neo4j` y `ml` dicen que se sirve realmente; `flagged` que pide el flag.
+    Cuando difieren es que la solucion no esta disponible en esta copia: es
+    lo que ve un alumno con la distribucion sin soluciones.
     """
+    ml_unlocked = _unlocked("LAB_ML")
     return {
-        "neo4j": {
-            "basic": "basic" in _neo4j_unlocked,
-            "intermediate": "intermediate" in _neo4j_unlocked,
-            "advanced": "advanced" in _neo4j_unlocked,
-        },
+        "neo4j": dict(_neo4j_served),
         "ml": {
-            "supervised": "supervised" in _unlocked("LAB_ML"),
-            "unsupervised": "unsupervised" in _unlocked("LAB_ML"),
-            "graph_ml": "graph_ml" in _unlocked("LAB_ML"),
+            bloque: (bloque in ml_unlocked) and _ml_disponible(modelo)
+            for bloque, modelo in _ML_MODELOS.items()
+        },
+        "flagged": {
+            "neo4j": {b: (b in _neo4j_unlocked)
+                      for b in ("basic", "intermediate", "advanced")},
+            "ml": {b: (b in ml_unlocked) for b in _ML_MODELOS},
         },
     }

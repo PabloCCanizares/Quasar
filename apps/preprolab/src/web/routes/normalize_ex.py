@@ -52,6 +52,14 @@ async def zscore(tabla: str, columna: str) -> dict:
     Pistas:
       - Si std=0, devolver warning.
       - histogram = numpy.histogram(clean, bins=30).
+
+    Compruebalo:
+      - La media del resultado tiene que quedar practicamente en 0 y la
+        desviacion tipica en 1. Si no, no estas restando la media o no
+        estas dividiendo por la desviacion.
+      - El orden de los valores no cambia: el mayor sigue siendo el mayor.
+      - Z-score no acota el rango, asi que es normal ver valores por encima
+        de 3 si hay outliers.
     """
     return _exercise_placeholder(
         "NORM-1",
@@ -80,6 +88,12 @@ async def minmax(tabla: str, columna: str) -> dict:
       - rng = max - min.
       - compression = porcentaje de filas con valor normalizado <= 0.1.
       - Si compression > 30% → outliers comprimiendo.
+
+    Compruebalo:
+      - El minimo tiene que quedar exactamente en 0 y el maximo en 1.
+      - Con outliers presentes, casi todos los datos se apelotonan cerca del
+        0. Eso NO es un fallo: es justo el problema que el ejercicio quiere
+        ensenarte, y se ve mejor en la comparativa de NORM-5.
     """
     return _exercise_placeholder(
         "NORM-2",
@@ -103,6 +117,14 @@ async def robust(tabla: str, columna: str) -> dict:
       - mediana = series.median().
       - IQR = q3 - q1 = series.quantile(0.75) - series.quantile(0.25).
       - Si IQR=0 → warning.
+
+    Compruebalo:
+      - La mediana del resultado tiene que quedar en 0.
+      - Comparado con Min-Max sobre los mismos datos, aqui los valores
+        centrales quedan mucho mas repartidos: esa es la ventaja de usar
+        mediana e IQR en vez de min y max.
+      - Si el IQR es 0 (columna casi constante) hay que tratarlo aparte, o
+        saldran infinitos.
     """
     return _exercise_placeholder(
         "NORM-3",
@@ -126,6 +148,12 @@ async def decimal(tabla: str, columna: str) -> dict:
       - max_abs = series.abs().max().
       - j = int(np.ceil(np.log10(max_abs))) si max_abs >= 1, sino 0.
       - divisor = 10 ** j.
+
+    Compruebalo:
+      - Todos los valores tienen que quedar dentro de [-1, 1].
+      - El divisor es una potencia de 10, asi que los digitos significativos
+        no cambian: solo se mueve la coma. Comprueba que 84.2 se convierte en
+        0.842 y no en otra cosa.
     """
     return _exercise_placeholder(
         "NORM-4",
@@ -160,6 +188,15 @@ async def compare(tabla: str, columna: str) -> dict:
       - Reutiliza la lógica de NORM-1/2/3/4 internamente (o llámalos).
       - Interpretación útil: si pct_in_0_0.1 > 30 en minmax, hay outliers.
       - Si std_robust < 0.5 * std_zscore, también indica outliers.
+
+    Compruebalo:
+      - Los cuatro metodos tienen que conservar el orden de los datos: el
+        robot mas caliente sigue siendo el mas caliente en los cuatro.
+      - Mira que porcentaje de datos queda en el primer 10% del rango con
+        cada metodo. Con outliers, Min-Max y Decimal apelotonan casi todo
+        ahi, y Robust no. Ese contraste es el resultado que se busca.
+      - Si los cuatro te dan distribuciones parecidas, comprueba que estas
+        usando una columna que de verdad tenga outliers.
     """
     return _exercise_placeholder(
         "NORM-5",

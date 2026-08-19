@@ -147,6 +147,14 @@ async def univariate(tabla: str, columna: str) -> dict:
       - `numpy.histogram(clean, bins=30)` devuelve (counts, bin_edges).
       - Para categóricas, `series.value_counts(dropna=False).head(30)`.
       - El frontend espera tipos nativos de Python — convierte numpy con `int()` y `float()`.
+
+    Compruebalo:
+      - La media y la mediana no tienen por que coincidir: si salen identicas
+        en una columna con outliers, sospecha que estas ignorando los valores
+        extremos sin querer.
+      - Q1 <= mediana <= Q3 siempre. Si no se cumple, los cuantiles estan mal.
+      - El histograma tiene que sumar tantos elementos como valores no nulos
+        haya: si suma el total de filas, no estas quitando los nulos.
     """
     return _exercise_placeholder(
         "EDA-1",
@@ -187,6 +195,15 @@ async def missing(tabla: str) -> dict:
         `(mask[a] & mask[b]).sum()` cuentan filas con ambas null.
       - Sólo te interesan los pares con al menos 1 co-ocurrencia (filtra).
       - Ordena el resultado por `both_null_count` descendente.
+
+    Compruebalo:
+      - El porcentaje de nulos por columna tiene que estar entre 0 y 100. Un
+        valor negativo o por encima de 100 delata una division mal hecha.
+      - Contrasta con la salida del seed: alli se documenta que columnas
+        llevan nulos inyectados y con que mecanismo. Si te salen nulos en
+        columnas que el seed no toca, estas contando celdas vacias como nulos.
+      - La co-ocurrencia de una columna consigo misma tiene que ser su propio
+        recuento de nulos.
     """
     return _exercise_placeholder(
         "EDA-2",
@@ -224,6 +241,16 @@ async def correlations(tabla: str) -> dict:
       - Itera con `i < j` para evitar duplicados y la diagonal.
       - Sustituye NaN por None al serializar (el JSON no soporta NaN).
       - El frontend usará la matriz para un heatmap Plotly.
+
+    Compruebalo:
+      - La diagonal de la matriz tiene que ser 1: toda columna correlaciona
+        perfectamente consigo misma. Si no, te has dejado el emparejamiento.
+      - La matriz es simetrica: corr(a,b) debe ser igual a corr(b,a).
+      - Ningun coeficiente puede salirse de [-1, 1].
+      - El seed inyecta a proposito tres columnas muy correlacionadas entre
+        si; tienen que aparecer en la lista de redundantes. Si no sale
+        ninguna pareja, el umbral esta demasiado alto o falta el valor
+        absoluto.
     """
     return _exercise_placeholder(
         "EDA-3",

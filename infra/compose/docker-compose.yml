@@ -146,6 +146,34 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  app-streamlab:
+    build:
+      context: ../..
+      dockerfile: apps/streamlab/Dockerfile
+    container_name: quasar-streamlab
+    hostname: app-streamlab
+    ports:
+      - "8003:8003"
+    env_file:
+      - .env.docker
+    environment:
+      # Específico de StreamLab — sobreescribe defaults del .env.docker.
+      WEB_PORT: "8003"
+      PYTHONPATH: /app
+      MONGO_DB: streamlab
+      QUASAR_ENV_FILE: /app/.env.docker
+    volumes:
+      - ../../infra/data/streamlab:/app/data
+      - ../../apps/streamlab/src:/app/src
+      - ../../infra/shared:/app/infra/shared
+      - ./.env.docker:/app/.env.docker:ro
+      - spark_ivy:/root/.ivy2
+    depends_on:
+      # No usa Neo4j: su material son series temporales, no relaciones.
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
   app-hub:
     build:
       context: ../..

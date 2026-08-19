@@ -46,6 +46,13 @@ async def neo4j_bridges(limit: int = 10):
       - (u:User)-[:INTERESTED_IN]->(h:Hashtag), agrupa por u y collect(h.name).
       - Filtra con WHERE tag_count >= 3.
       - Despues haz un segundo MATCH para contar followers entrantes.
+    Compruebalo:
+      - Todo registro tiene que traer tag_count >= 3. Si aparece alguno con
+        menos, el WHERE se esta aplicando antes de agrupar.
+      - La longitud de `tags` tiene que coincidir con tag_count en cada fila.
+        Si tags trae repetidos, te falta un DISTINCT en el collect.
+      - Salen bastantes menos usuarios que el total del grafo: son los que
+        cruzan comunidades. Si sale casi todo el mundo, el filtro no actua.
     """
     return exercise_placeholder("Neo4j-intermediate-1",
         "Agrupa hashtags por usuario, filtra >= 3, anade followers")
@@ -66,6 +73,13 @@ async def neo4j_mutual_interests(user_id: str, limit: int = 5):
       - Patron: (me)-[:INTERESTED_IN]->(h)<-[:INTERESTED_IN]-(other).
       - Excluye me <> other.
       - collect(h.name) AS shared_tags, count(h) AS shared_count.
+    Compruebalo:
+      - El propio usuario NO puede aparecer en su lista. Si sale el primero
+        compartiendolo todo, te falta el me <> other.
+      - shared_count tiene que ir en orden decreciente y coincidir con el
+        tamano de shared_tags.
+      - Ningun shared_count puede superar el numero de hashtags del propio
+        usuario: no se pueden compartir mas de los que tienes.
     """
     return exercise_placeholder("Neo4j-intermediate-2",
         "Patron en V para hashtags compartidos")
@@ -86,6 +100,14 @@ async def neo4j_hashtag_graph(limit: int = 20):
       - Doble patron: (u)-[:INTERESTED_IN]->(h1) y (u)-[:INTERESTED_IN]->(h2).
       - Para evitar duplicados: WHERE id(h1) < id(h2).
       - count(u) AS shared_users.
+    Compruebalo:
+      - Ningun par puede tener tag1 igual a tag2: seria un hashtag consigo
+        mismo, senal de que falta la condicion de desigualdad.
+      - Ningun par puede salir dos veces con el orden cambiado. Si ves
+        (deporte, salud) y ademas (salud, deporte), el id(h1) < id(h2) no
+        esta aplicandose.
+      - shared_users nunca supera el tamano de la comunidad mas pequena de
+        las dos: quien comparte ambos hashtags esta en las dos.
     """
     return exercise_placeholder("Neo4j-intermediate-3",
         "Doble MATCH al mismo usuario, id(h1) < id(h2)")
@@ -110,6 +132,14 @@ async def neo4j_my_communities(user_id: str, limit: int = 8):
       - Patron en V desde me: (me)-[:INTERESTED_IN]->(h)<-[:INTERESTED_IN]-(other).
       - collect(DISTINCT {id, username, followers}) AS members.
       - members[0..5] AS top_members.
+    Compruebalo:
+      - top_members nunca puede traer mas de 5 elementos, y el propio usuario
+        no deberia aparecer entre ellos.
+      - `size` es la comunidad entera, asi que casi siempre sera mayor que la
+        longitud de top_members. Si son siempre iguales, estas cortando antes
+        de contar.
+      - Los hashtags devueltos tienen que ser un subconjunto de los que ese
+        usuario tiene en el ejercicio 1.
     """
     return exercise_placeholder("Neo4j-intermediate-4",
         "Para cada hashtag de me, recoge miembros y corta a 5")
@@ -131,6 +161,14 @@ async def neo4j_community_overlap(user_id: str):
       - Usa OPTIONAL MATCH para detectar las relaciones :FOLLOWS sin
         forzar que existan.
       - count(me) > 0 AS i_follow para convertir presencia en booleano.
+    Compruebalo:
+      - i_follow y follows_me son independientes: tiene que haber casos con
+        uno true y el otro false. Si siempre coinciden, estas mirando la
+        relacion sin respetar la direccion.
+      - Con OPTIONAL MATCH no puede desaparecer ningun usuario: si al anadir
+        los follows la lista se acorta respecto al ejercicio 2, has usado un
+        MATCH normal en algun sitio.
+      - `overlap` tiene que cuadrar con la longitud de `shared`.
     """
     return exercise_placeholder("Neo4j-intermediate-5",
         "Combina patron en V + OPTIONAL MATCH para los follows")

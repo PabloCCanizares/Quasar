@@ -104,7 +104,32 @@ def _install_fake_src() -> None:
     sys.modules["src.web.corpus_loader"] = corpus_loader
 
     config = types.ModuleType("src.config")
+    # Valores que los módulos leen en el import. Los paths apuntan a sitios
+    # que los tests no tocan: las funciones que probamos son puras y no
+    # escriben; las que escriben reciben el destino por parámetro.
+    config.RAW_PATH = ROOT / "infra" / "data" / "streamlab" / "raw"
+    config.CHECKPOINTS_PATH = ROOT / "infra" / "data" / "streamlab" / "checkpoints"
+    config.TEMP_ALERTA = 75.0
+    config.MONGO_URI = "mongodb://localhost:27017"
+    config.MONGO_DB = "streamlab_test"
     sys.modules["src.config"] = config
+
+    # Sesión de Spark de StreamLab: los tests crean la suya y pasan los
+    # DataFrames por parámetro, así que estas funciones no deberían llegar a
+    # llamarse. Si alguna se llama, el error dice por qué.
+    def _no_disponible(*_args, **_kwargs):
+        raise RuntimeError(
+            "src.spark.session está stubbeado: pasa el DataFrame por parámetro"
+        )
+
+    spark_pkg = types.ModuleType("src.spark")
+    spark_pkg.__path__ = []
+    sys.modules["src.spark"] = spark_pkg
+    session = types.ModuleType("src.spark.session")
+    session.get_spark = _no_disponible
+    session.leer_tabla = _no_disponible
+    session.leer_flujo = _no_disponible
+    sys.modules["src.spark.session"] = session
 
 
 _install_fake_fastapi()
@@ -113,6 +138,7 @@ _install_fake_src()
 # Módulos puros sin dependencias web.
 _load("quasar_bpe", ROOT / "apps" / "llmprep" / "src" / "tokenize" / "bpe.py")
 _load("quasar_ngram", ROOT / "apps" / "llmprep" / "src" / "train" / "ngram_lm.py")
+_load("quasar_emisor", ROOT / "apps" / "streamlab" / "src" / "seed" / "emit_telemetry.py")
 
 # Módulos de rutas: se cargan gracias a los stubs de arriba. Exponen las
 # funciones puras (limpieza, MinHash/LSH, MDLP, Cramér's V) que testeamos.

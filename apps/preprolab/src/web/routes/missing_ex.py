@@ -100,6 +100,13 @@ async def dropna_action(
       - df.dropna(how='any'/'all', subset=cols)
       - df.dropna(thresh=N, subset=cols)
       - rows_dropped_pct = 100 * dropped / total
+
+    Compruebalo:
+      - Las filas resultantes nunca pueden ser mas que las de partida.
+      - Con how='all' se borran menos filas que con how='any': 'all' exige
+        que TODA la fila sea nula. Si te sale al reves, los tienes cambiados.
+      - Despues de eliminar no puede quedar ningun nulo en las columnas
+        consideradas: comprobarlo es la mejor prueba de que funciono.
     """
     return _exercise_placeholder(
         "MISSING-1",
@@ -142,6 +149,16 @@ async def impute_simple(
       - Recuerda devolver tipos nativos (int, float), no numpy.
       - La variance reduction es importante para que el alumno VEA que
         la media reduce la dispersión (problema del método simple).
+
+    Compruebalo:
+      - Despues de imputar, esa columna tiene que quedarse con cero nulos.
+      - El numero de valores imputados tiene que coincidir con los nulos que
+        habia antes.
+      - La media apenas se mueve al imputar por la media; la desviacion
+        tipica, en cambio, BAJA siempre. Si tu desviacion sube, estas
+        imputando otra cosa.
+      - La moda solo tiene sentido en categoricas; en una numerica continua
+        suele dar un valor repetido raro, y eso es esperable.
     """
     return _exercise_placeholder(
         "MISSING-2",
@@ -191,6 +208,15 @@ async def impute_knn(
       - `from sklearn.impute import KNNImputer`
       - `from sklearn.preprocessing import StandardScaler`
       - `series.std().replace(0, 1)` evita división por cero.
+
+    Compruebalo:
+      - Cero nulos al terminar, y tantos imputados como nulos habia.
+      - Los valores imputados tienen que caer dentro del rango de los
+        originales: KNN promedia vecinos, no inventa extremos.
+      - Compara la desviacion tipica con la de imputar por la media: KNN
+        deberia conservar mas variabilidad, porque usa columnas relacionadas
+        en vez de un unico numero. Si pierde mas que la media, revisa el
+        escalado previo.
     """
     return _exercise_placeholder(
         "MISSING-3",
@@ -241,6 +267,13 @@ async def impute_kmeans(
       - scaler.inverse_transform(km.cluster_centers_) para des-estandarizar
       - Recuerda guardar el null_mask ANTES de imputar temporalmente,
         para saber qué filas hay que reemplazar al final.
+
+    Compruebalo:
+      - Cero nulos al terminar, y tantos imputados como nulos habia.
+      - Cada cluster tiene que recibir un valor de imputacion distinto: si
+        todos los imputados son identicos, el clustering no esta separando
+        nada y estas imputando practicamente por la media.
+      - La suma de tamanos de los clusters tiene que ser el total de filas.
     """
     return _exercise_placeholder(
         "MISSING-4",
@@ -288,6 +321,16 @@ async def compare(tabla: str, columna: str) -> dict:
       - variance_loss = 1 - (std_imputed / std_drop).
       - El método que mejor preserva varianza SUELE ser KMeans o KNN
         (capturan estructura), no mean/median (reducen varianza).
+
+    Compruebalo:
+      - Los cinco metodos tienen que dejar la columna sin nulos, salvo drop,
+        que lo que hace es quitar filas.
+      - Toma drop como referencia: es el unico que no inventa nada. Los
+        demas pierden variabilidad respecto a el, asi que su desviacion
+        tipica sera menor. Si alguno la aumenta, algo va mal.
+      - Los metodos que miran otras columnas (KNN, KMeans) deberian perder
+        menos variabilidad que los que solo miran una constante. Ese es el
+        resultado que el ejercicio quiere que descubras.
     """
     return _exercise_placeholder(
         "MISSING-5",

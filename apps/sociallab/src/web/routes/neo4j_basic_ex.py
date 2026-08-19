@@ -42,6 +42,15 @@ async def neo4j_stats():
     Pistas:
       - Encadena varios MATCH usando WITH para acumular contadores entre ellos.
       - count(x) cuenta filas; count(DISTINCT x) cuenta valores unicos.
+
+    Compruebalo:
+      - users tiene que cuadrar con los usuarios cargados en Mongo: el ETL
+        mete en el grafo los mismos que en la coleccion. Si en Neo4j salen
+        muchos mas, estas contando filas del patron y no nodos distintos.
+      - follows tiene que ser bastante mayor que users: cada usuario sigue a
+        varios. Si salen parecidos, algo esta colapsando el conteo.
+      - Ningun conteo puede ser 0 con el ETL ejecutado. Un 0 casi siempre es
+        que la etiqueta o el tipo de relacion estan mal escritos.
     """
     return exercise_placeholder("Neo4j-basic-1",
         "Cuenta nodos User/Hashtag y relaciones FOLLOWS/INTERESTED_IN")
@@ -73,6 +82,15 @@ async def neo4j_influencers(limit: int = 10):
       - Usa el patron (u:User)<-[:FOLLOWS]-(follower) para contar entrantes.
       - WITH u, count(follower) AS followers permite ordenar luego.
       - ORDER BY followers DESC LIMIT $limit.
+
+    Compruebalo:
+      - La lista tiene que venir en orden decreciente de followers. Parece
+        obvio, pero es el fallo mas comun: ordenar antes de agregar.
+      - Cambia `limit` y comprueba que los primeros puestos no cambian; solo
+        se alarga la lista. Si cambian, el ORDER BY va despues del LIMIT.
+      - Ojo con la direccion de la flecha: si te salen los que MAS siguen en
+        vez de los mas seguidos, la tienes al reves. Un influencer tiene
+        muchos seguidores, no sigue a mucha gente.
     """
     return exercise_placeholder("Neo4j-basic-2",
         "Cuenta los :FOLLOWS entrantes y ordena DESC")
@@ -92,6 +110,15 @@ async def neo4j_communities(limit: int = 10):
       - (h:Hashtag)<-[:INTERESTED_IN]-(u:User) → cuenta cuantos User
         apuntan a cada Hashtag.
       - Devuelve h.name como hashtag y count(u) como users.
+
+    Compruebalo:
+      - Los hashtags que salgan arriba deberian ser los tematicos del seed
+        (tecnologia, deporte y demas), no cadenas raras. Si ves nombres con
+        mayusculas mezcladas o con '#' delante, estas leyendo del grafo algo
+        que el ETL deberia haber normalizado.
+      - Suma los users de todos los hashtags y compara con el total de
+        relaciones INTERESTED_IN del ejercicio 1: tiene que dar lo mismo.
+        Si tu suma es menor, el LIMIT esta recortando antes de agregar.
     """
     return exercise_placeholder("Neo4j-basic-3",
         "Cuenta usuarios por hashtag y ordena DESC")

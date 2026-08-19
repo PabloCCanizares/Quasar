@@ -79,96 +79,129 @@ function dot(online) { return `<span class="status-dot ${online ? 'dot-online':'
 // ============================================================
 // HOME
 // ============================================================
-// Qué conceptos se practican en cada laboratorio. Los títulos salen de
-// buildConcepts, así que si allí cambia el nombre de una idea, aquí cambia
-// solo: esto solo dice qué número va con qué app.
-const APP_CONCEPTS = {
-    sociallab: [2, 3, 7],
-    preprolab: [1, 5, 6],
-    llmprep:   [5, 8],
-};
 
-// El hilo del curso: cuatro paradas, de los datos crudos al modelo.
-function courseArc(P) {
-    const noisy = P.llmprep ? (P.llmprep.docs || 0) - (P.llmprep.clean_docs || 0) : null;
-    const steps = [
-        { k: "Empiezas aquí", t: "Datos sucios",
-          d: noisy ? `${noisy.toLocaleString('es')} problemas esperándote` : "nulls, duplicados, encoding roto…",
-          c: "#38bdf8" },
-        { k: "Los limpias", t: "Preprocesamiento",
-          d: "las técnicas del Tema 5, una a una", c: "#1d9bf0" },
-        { k: "Los explotas", t: "Bases poliglotas + ML",
-          d: "MongoDB, Neo4j y seis modelos", c: "#34d399" },
-        { k: "Y das el salto", t: "Datos para LLMs",
-          d: "corpus sucio vs limpio", c: "#a78bfa" },
-    ];
-    return steps.map((s, i) => `
-        <a class="arc-step" href="#learn" style="--accent:${s.c}">
-            <span class="arc-k">${s.k}</span>
-            <span class="arc-t">${s.t}</span>
-            <span class="arc-d">${s.d}</span>
-        </a>${i < steps.length - 1 ? '<span class="arc-sep">→</span>' : ''}`).join("");
+// --- Temas que el alumno marca como hechos ---
+// Vive en su navegador y lo pone él. El Hub no sabe quién es nadie ni tiene
+// forma de comprobarlo: es un cuaderno, no una nota. Usar los flags LAB_*
+// como progreso sería engañoso, porque destapar un bloque significa
+// "enséñame la solución", casi lo contrario de haberlo hecho.
+function temasHechos() {
+    try { return new Set(JSON.parse(localStorage.getItem("quasar_temas") || "[]")); }
+    catch { return new Set(); }
+}
+
+function marcarTema(n) {
+    const hechos = temasHechos();
+    hechos.has(n) ? hechos.delete(n) : hechos.add(n);
+    localStorage.setItem("quasar_temas", JSON.stringify([...hechos]));
+    renderHome();
+}
+
+function reiniciarTemas() {
+    if (!confirm("¿Desmarcar todos los temas? Solo afecta a tu navegador.")) return;
+    localStorage.removeItem("quasar_temas");
+    renderHome();
+}
+
+function duracion(min) {
+    if (!min) return "";
+    if (min < 60) return `${min} min`;
+    const h = Math.floor(min / 60), m = min % 60;
+    return m ? `${h} h ${m} min` : `${h} h`;
+}
+
+function paradaTema(tema, hechos, onlineMap, dataMap) {
+    const hecho = hechos.has(tema.n);
+    const teoria = !tema.app;
+    const color = tema.color || "#38bdf8";
+    const clases = ["parada", hecho ? "hecho" : "", teoria ? "teoria" : ""].join(" ");
+
+    let insignia, accion;
+    if (teoria) {
+        insignia = `<span class="chip-teoria">◇ solo teoría</span>`;
+        accion = tema.enlace
+            ? `<a class="parada-link" href="#${tema.enlace.vista}">${tema.enlace.texto} →</a>`
+            : `<span class="pendiente">sin laboratorio todavía</span>`;
+    } else {
+        const ds = dataMap[tema.app] || {};
+        insignia = `<span class="chip-lab" style="--c:${color}">${dot(onlineMap[tema.app])}${tema.app_nombre}</span>`;
+        accion = `<a class="parada-btn" style="--c:${color}" href="${tema.url}" target="_blank">Abrir</a>
+            <span class="prog">${tema.ejercicios} ejercicios · ${
+                ds.seeded ? "datos listos" : "sin datos"}</span>`;
+    }
+
+    return `<div class="${clases}" style="--c:${color}">
+        <button class="parada-punto" onclick="marcarTema(${tema.n})"
+                title="${hecho ? "Marcar como pendiente" : "Marcar como hecho"}"
+                aria-label="${hecho ? "Marcar tema como pendiente" : "Marcar tema como hecho"}">
+            ${hecho ? "✓" : ""}
+        </button>
+        <div class="parada-caja">
+            <div class="parada-txt">
+                <div class="linea"><h3>${tema.n} · ${tema.titulo}</h3>${insignia}
+                    ${tema.minutos ? `<span class="parada-min">${duracion(tema.minutos)}</span>` : ""}</div>
+                <p>${tema.resumen}</p>
+                ${tema.objetivo ? `<p class="parada-obj"><span>Al terminar sabrás</span> ${tema.objetivo}.</p>` : ""}
+            </div>
+            <div class="parada-accion">${accion}</div>
+        </div>
+    </div>`;
 }
 
 async function renderHome() {
     const el = document.getElementById("content");
-    const [cat, status, infra, prof] = await Promise.all([
+    const [cat, status, infra] = await Promise.all([
         getCatalog(), fetchJSON("/api/hub/status"), fetchJSON("/api/hub/infra"),
-        safeJSON("/api/hub/profiles"),
     ]);
-    const P = (prof && prof.profiles) || {};
     const onlineMap = {}; status.apps.forEach(a => onlineMap[a.key] = a.online);
+    const dataMap = infra.data || {};
+    const hechos = temasHechos();
+    const unidades = cat.temario || [];
+    const totalTemas = unidades.reduce((n, u) => n + u.temas.length, 0);
+    const totalMin = unidades.reduce((n, u) => n + (u.minutos || 0), 0);
 
-    // Títulos de los conceptos, para etiquetar cada laboratorio con lo que enseña.
-    const appMap = {}; cat.apps.forEach(a => appMap[a.key] = a);
-    const titles = {};
-    buildConcepts({ app: appMap, P }, infra, k => (appMap[k] || {}).url_public || "#")
-        .forEach(c => titles[c.n] = c.title);
+    const ruta = unidades.map(u => `
+        <div class="unidad-sep">
+            <span class="unidad-num">${u.titulo}</span>
+            <span class="unidad-preg">${u.pregunta}</span>
+            ${u.minutos ? `<span class="unidad-min">${duracion(u.minutos)}</span>` : ""}
+        </div>
+        ${u.temas.map(t => paradaTema(t, hechos, onlineMap, dataMap)).join("")}
+    `).join("");
 
-    const cards = cat.apps.map(app => {
-        const ds = (infra.data || {})[app.key] || {};
-        const learns = (APP_CONCEPTS[app.key] || []).map(n =>
-            `<a class="lc-chip" href="#learn">${titles[n] || ""}</a>`).join("");
-        return `
-        <div class="app-card" style="--accent:${app.color}">
-            <div class="accent-bar"></div>
-            <h2>${app.name}</h2>
-            <div class="tagline">${app.tagline}</div>
-            <p>${app.description}</p>
-            <div class="lc-what">Aquí practicas</div>
-            <div class="lc-chips">${learns}</div>
-            <div class="tags">${app.tech.map(t=>`<span class="tag">${t}</span>`).join("")}</div>
-            <div class="card-foot">
-                <span class="port">${dot(onlineMap[app.key])}${app.url_public.replace('http://localhost','')} · ${app.exercises} ejercicios
-                    ${ds.seeded ? '· <span style="color:#34d399">datos listos</span>' : '· <span style="color:#64748b">sin datos</span>'}</span>
-                <a class="open-btn" href="${app.url_public}" target="_blank">Abrir →</a>
-            </div>
-        </div>`;
-    }).join("");
+    const pct = totalTemas ? Math.round(100 * hechos.size / totalTemas) : 0;
 
     el.innerHTML = `
         <div class="hero">
-            <h1>✦ QUASAR</h1>
-            <p>Del dato crudo al modelo entrenado. Tres laboratorios y ${cat.total_exercises} ejercicios sobre un mismo stack: MongoDB, Neo4j y Spark.</p>
+            <h1>Tratamiento y Gestión de Datos Masivos</h1>
+            <p>Del dato en crudo al modelo entrenado. ${totalTemas} temas, cuatro laboratorios
+            y ${cat.total_exercises} ejercicios sobre datos que se parecen a los de verdad:
+            sucios, tardíos y a escala.</p>
+            <div class="curso-meta">
+                <span>${hechos.size} de ${totalTemas} temas marcados</span>
+                ${totalMin ? `<span>· ${duracion(totalMin)} de trabajo estimado</span>` : ""}
+                <span class="barra-curso"><span style="width:${pct}%"></span></span>
+                ${hechos.size ? `<button class="reset-temas" onclick="reiniciarTemas()">reiniciar</button>` : ""}
+            </div>
         </div>
 
-        <div class="arc">${courseArc(P)}</div>
-        <p class="arc-foot-link">
-            <a href="#learn">Las ${Object.keys(titles).length} ideas del curso, en detalle →</a>
+        <div class="ruta">${ruta}</div>
+
+        <p class="ruta-nota">
+            Los temas los marcas tú, y se guardan solo en este navegador: es tu cuaderno,
+            no una nota. <a href="#learn">Las ideas del curso, en detalle →</a>
         </p>
 
-        <h2 class="home-h">Dónde se practica</h2>
-        <div class="app-grid">${cards}</div>
-
-        <div class="infra-strip" style="margin-top:24px">
+        <div class="infra-strip" style="margin-top:26px">
             ${infraChip("MongoDB", infra.infra.mongodb.online, infra.infra.mongodb.role)}
             ${infraChip("Neo4j", infra.infra.neo4j.online, infra.infra.neo4j.role, "http://localhost:7474")}
-            <span class="infra-summary">${status.summary.apps_online}/${status.summary.apps_total} apps · ${status.summary.blocks_unlocked}/${status.summary.blocks_total} bloques destapados</span>
+            <span class="infra-summary">${status.summary.apps_online}/${status.summary.apps_total} laboratorios activos ·
+                ${status.summary.blocks_unlocked}/${status.summary.blocks_total} bloques destapados ·
+                <a href="#status" style="color:#38bdf8">Estado →</a></span>
         </div>
-        <p class="muted" style="text-align:center;margin-top:18px">
+        <p class="muted" style="text-align:center;margin-top:16px">
             <a href="#onboarding" style="color:#38bdf8">Primeros pasos →</a> ·
-            <a href="#arch" style="color:#38bdf8">Cómo funciona Quasar →</a> ·
-            <a href="#status" style="color:#38bdf8">Estado del ecosistema →</a>
+            <a href="#arch" style="color:#38bdf8">Cómo funciona Quasar →</a>
         </p>`;
 }
 
@@ -360,7 +393,7 @@ async function renderLearn() {
 
     el.innerHTML = `
         <div class="hero" style="padding-bottom:20px">
-            <h1>La asignatura en 10 ideas</h1>
+            <h1>La asignatura en ${concepts.length} ideas</h1>
             <p>De los datos en crudo al modelo entrenado. Cada idea te lleva al laboratorio donde se trabaja, y varias las verás con <strong>tus propios datos</strong>, no con ejemplos de pizarra.</p>
         </div>
         <div class="concept-grid">${concepts.map(c => conceptCard(c, ctx)).join("")}</div>
@@ -420,11 +453,17 @@ function buildConcepts(ctx, infra, url) {
           more:"LLM Lab parte de un corpus tipo Wikipedia en español, sucio a propósito. Lo limpias (encoding, HTML, idioma, PII), le quitas los casi-duplicados con MinHash/LSH y guardas el parecido como grafo en Neo4j, lo tokenizas con un BPE hecho a mano y entrenas un modelo pequeño. La demo final entrena el mismo modelo con el corpus sucio y con el limpio para que veas la diferencia.",
           blocksOf:"llmprep",
           practice:{label:"LLM Lab · corpus", href:url('llmprep')} },
-        { n:9, color:"#7dd3fc", tag:"Buenas prácticas", title:"Reproducibilidad y gobernanza",
+        { n:9, color:"#f59e0b", tag:"Tiempo real", title:"Cuando los datos no paran de llegar",
+          what:"Todo lo anterior es batch: coges un lote, lo procesas entero y guardas. En streaming los datos siguen llegando mientras respondes, así que no puedes esperar a tenerlo todo ni volver atrás a releerlo.",
+          idea:"Una respuesta correcta que llega tarde es otra forma de estar equivocada. Aquí se decide cuánto esperas antes de contestar.",
+          more:"StreamLab retoma la flota de robots de PreproLab, pero emitiendo en vivo. Aparecen problemas que en batch ni existen: lecturas que llegan desordenadas, relojes desajustados, robots que se callan sin avisar y duplicados porque el emisor reintenta. Se trabaja con ventanas temporales, watermarks para decidir hasta cuándo esperas a un dato tardío, y estado incremental que agrega sin releer el histórico.",
+          blocksOf:"streamlab",
+          practice:{label:"StreamLab · centro de control", href:url('streamlab')} },
+        { n:10, color:"#7dd3fc", tag:"Buenas prácticas", title:"Reproducibilidad y gobernanza",
           what:"Toda la lógica de transformación vive en el ETL, versionado en git, no en pasos manuales que nadie recuerda. Se puede regenerar todo desde cero.",
           idea:"Si no puedes reconstruir un dato desde su origen, no lo controlas: lo estás improvisando.",
           more:"Versionar el ETL en git significa que el dato no depende de que alguien recuerde qué tocó a mano un martes por la tarde. Cualquiera clona el repo, ejecuta el pipeline y obtiene exactamente lo mismo. Eso es lo que separa un análisis que se sostiene de uno que no se puede repetir." },
-        { n:10, color:"#f472b6", tag:"Cómo se aprende aquí", title:"Método scaffold / solución",
+        { n:11, color:"#f472b6", tag:"Cómo se aprende aquí", title:"Método scaffold / solución",
           what:"Cada algoritmo está dos veces: el hueco a rellenar (scaffold, con un NotImplementedError) y la solución. Un flag decide cuál se sirve, sin tocar el código.",
           idea:"Empiezas con el ejercicio en blanco; cuando lo implementas, la tarjeta de la app se enciende sola.",
           more:"En cualquier concepto de arriba puedes pulsar «Ampliar» y alternar cada bloque entre solución y ejercicio tú mismo: es tu copia de la app, así que mandas tú. Ver la solución primero para estudiarla, o dejarla en blanco para pelearte con ella, lo eliges según te venga.",
@@ -654,7 +693,7 @@ function renderOnboarding() {
 
         <div class="step"><div class="num">1</div><div class="body">
             <h3>Entiende de qué va esto</h3>
-            <p>Pásate por <a href="#learn" style="color:#38bdf8">Aprende</a>: diez ideas que resumen la asignatura, cada una con el laboratorio donde se trabaja. Diez minutos que ahorran mucha confusión luego.</p>
+            <p>Pásate por <a href="#learn" style="color:#38bdf8">Aprende</a>: las ideas que resumen la asignatura, cada una con el laboratorio donde se trabaja. Diez minutos que ahorran mucha confusión luego.</p>
         </div></div>
 
         <div class="step"><div class="num">2</div><div class="body">

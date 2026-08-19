@@ -56,6 +56,14 @@ async def srswor(
 
     Pistas:
       - df.sample(n=N, replace=False, random_state=seed).
+
+    Compruebalo:
+      - El tamano de la muestra tiene que ser el que pediste.
+      - Sin reemplazo: ninguna fila puede aparecer dos veces.
+      - Con la semilla fija, dos ejecuciones tienen que dar exactamente la
+        misma muestra. Si cambia, no estas fijando el random_state.
+      - La proporcion de clases se parecera a la original, pero no sera
+        identica: es muestreo aleatorio, no estratificado.
     """
     return _exercise_placeholder(
         "INST-1",
@@ -79,6 +87,13 @@ async def stratified(
     Pistas:
       - df.groupby(target).apply(lambda g: g.sample(frac=fraction, ...)).
       - Usa include_groups=True (pandas reciente).
+
+    Compruebalo:
+      - Aqui SI: la proporcion de cada clase en la muestra tiene que
+        mantenerse practicamente igual que en el original. Esa es toda la
+        diferencia con INST-1 y es la comprobacion que importa.
+      - Ninguna clase puede desaparecer, por pequena que sea.
+      - El tamano total sigue siendo el que pediste.
     """
     return _exercise_placeholder(
         "INST-2",
@@ -104,6 +119,14 @@ async def balanced(
       - sizes = df.groupby(target).size().
       - target_size = sizes.min() o sizes.max() según strategy.
       - replace=True solo para oversample.
+
+    Compruebalo:
+      - Todas las clases tienen que acabar con el mismo numero de filas, o lo
+        mas parecido posible si alguna no tiene suficientes.
+      - Esto cambia la proporcion original a proposito: comparalo con INST-2
+        y fijate en que la distribucion resultante ya no se parece a la de
+        partida. Es lo que se busca al equilibrar.
+      - El total no puede superar tamano_por_clase x numero de clases.
     """
     return _exercise_placeholder(
         "INST-3",
@@ -129,6 +152,13 @@ async def by_clusters(
       - StandardScaler + KMeans con random_state=seed.
       - sizes = pd.Series(labels).value_counts().
       - chosen = sizes.head(n_clusters_to_select).index.
+
+    Compruebalo:
+      - Todos los clusters tienen que aportar alguna fila: si alguno se queda
+        sin representacion, la muestra no cubre el espacio.
+      - La suma de lo tomado de cada cluster es el tamano final.
+      - Comparado con el muestreo aleatorio simple, esto deberia cubrir mejor
+        las zonas poco pobladas.
     """
     return _exercise_placeholder(
         "INST-4",
@@ -154,6 +184,14 @@ async def kmeans_compress(
       - scaler.inverse_transform() para volver a escala original.
       - df.groupby('_cluster')[target].agg(lambda s: s.mode().iloc[0]).
       - compression_ratio = N / k.
+
+    Compruebalo:
+      - El resultado tiene tantas filas como centroides pediste, no mas.
+      - Los centroides tienen que caer dentro del rango de los datos
+        originales: son promedios, no puntos inventados.
+      - La compresion es enorme comparada con el muestreo, pero ya no son
+        filas reales sino representantes. Esa diferencia es el punto del
+        ejercicio.
     """
     return _exercise_placeholder(
         "INST-5",

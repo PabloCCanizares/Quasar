@@ -67,6 +67,9 @@ TASKS = {
         "ingest": (["python", "-m", "src.ingest.generate_corpus"], False),
         "etl":    (["python", "-m", "src.spark.run_pipeline"], True),
     },
+    "streamlab": {
+        "emit": (["python", "-m", "src.seed.emit_telemetry"], False),
+    },
 }
 
 

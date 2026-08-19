@@ -2,113 +2,163 @@
 
 ![Quasar — Plataforma docente de Big Data + IA](docs/assets/banner.png)
 
-> Plataforma docente de **Big Data + IA** para la asignatura de Tratamiento y Gestión de Datos Masivos.
-> Un único stack poliglota (MongoDB + Neo4j + Spark + FastAPI) que aloja **varias aplicaciones independientes**, cada una enseñando un caso de uso distinto del mismo temario.
+> Laboratorio de **Tratamiento y Gestión de Datos Masivos**: cuatro
+> aplicaciones donde practicar el temario completo sobre datos que se parecen
+> a los de verdad — sucios, tardíos y a escala.
 
-```
-                      ┌─────────────────────────────────────────────────┐
-                      │                    QUASAR                       │
-                      │     Plataforma común (poliglota + ETL + ML)     │
-                      └─────────────────────────────────────────────────┘
-                              ▲                ▲                ▲
-                              │                │                │
-                ┌─────────────┴────┐  ┌────────┴────────┐  ┌────┴──────────┐
-                │    SocialLab     │  │    PreproLab    │  │    LLM Lab    │
-                │  Red social      │  │  Tema 5 puro    │  │  NLP / corpus │
-                │  poliglota       │  │ Preprocesamiento│  │  para LLMs    │
-                │   :8000          │  │     :8002       │  │    :8001      │
-                └──────────────────┘  └─────────────────┘  └───────────────┘
+## Empieza aquí
 
-         ┌─────────────────────────────────────────────────────────────────┐
-         │  Infraestructura compartida (un solo cluster):                  │
-         │    • MongoDB :27017     • Neo4j :7474/:7687                     │
-         │    • infra/shared/      • data lake por app                     │
-         └─────────────────────────────────────────────────────────────────┘
-```
-
-## Por qué existe
-
-Montar un laboratorio docente de Big Data desde cero cuesta **días por curso**: instalar Spark, levantar Mongo + Neo4j, conectar la web, generar datos sintéticos, crear ejercicios… y cada año vuelve a romperse.
-
-Quasar lo resuelve de una sola vez:
-
-- **Un comando** levanta el ecosistema completo: `./lab.sh sociallab up`.
-- **Una sola instalación** de Mongo + Neo4j sirve a varias asignaturas (cada app usa su propia base de datos).
-- **Ejercicios bloqueables**: el profesor "destapa" bloques con `./lab.sh <app> unlock <bloque>` según avanza el curso. El alumno empieza viendo el esqueleto y va completándolo.
-- **Datos sucios reales** generados sintéticamente: cada app trae un escenario narrativo (red social, flota de robots) con problemas intencionados que el alumno debe resolver.
-- **De local a cloud sin tocar código**: misma base sirve para Docker local, MongoDB Atlas + Neo4j Aura, o Databricks DBFS.
-
-No es Jupyter, no es Streamlit, no es un boilerplate genérico. Es una **plataforma de laboratorios** pensada específicamente para enseñar arquitecturas modernas de datos en una asignatura universitaria.
-
-## Apps del ecosistema
-
-**El [Quasar Hub](apps/hub/) (`:8080`) es la puerta de entrada**: landing explicativa, estado agregado de las 3 apps en vivo, panel de configuración del profesor (desbloquear/bloquear bloques desde la web) y guía de primeros pasos. Es el único puerto que necesitas conocer.
-
-| App | Estado | Puerto | Rol |
-|---|---|---|---|
-| [**Quasar Hub**](apps/hub/) | **Completa** | `:8080` | Puerta de entrada: explica, navega, configura, onboarding |
-| [**SocialLab**](apps/sociallab/README.md) | **Completa** | `:8000` | Bases poliglotas + Spark ML — 18 ejercicios |
-| [**PreproLab**](apps/preprolab/README.md) | **Completa** | `:8002` | Tema 5 — Preprocesamiento + Pipeline Studio — 37 ejercicios |
-| [**LLM Lab**](apps/llmprep/README.md) | **Completa** | `:8001` | NLP / corpus para LLMs — 18 ejercicios |
-
-Cada app tiene su propio README con la lista detallada de ejercicios. **73 ejercicios** scaffold/solución en total a lo largo del curso.
-
-> **Fuente de verdad de los conteos**: el catálogo del Hub ([`apps/hub/src/config/__init__.py`](apps/hub/src/config/__init__.py), servido en `/api/hub/catalog`) es la referencia única. Cualquier número de ejercicios en este repo debe cuadrar con `total_exercises()` de ese catálogo.
-
-### Comandos globales (afectan a todo el ecosistema)
-
-```bash
-./lab.sh tour            # arranca las 3 apps + seed + ETL: demo en 1 comando (~2-3 min)
-./lab.sh all-solutions   # destapa todos los bloques de todas las apps (demo profesor)
-./lab.sh all-exercises   # bloquea todo (modo alumno por defecto)
-./lab.sh down-all        # para todo el ecosistema
-```
-
-Las tres webs se enlazan entre sí: hay un selector de apps en la cabecera de cada una (`:8000` ↔ `:8001` ↔ `:8002`).
-
-## Arranque rápido
-
-### En 30 segundos: ver SocialLab funcionando
+Necesitas **Docker Desktop** y **Git**. Nada más.
 
 ```bash
 git clone https://github.com/PabloCCanizares/Quasar.git
 cd Quasar
-./lab.sh sociallab up
+./lab.sh tour
 ```
 
-Abre <http://localhost:8000>. La web está vacía (sin datos) pero responde. Para cargar la red social demo:
+El `tour` levanta el ecosistema entero y genera los datos. Tarda dos o tres
+minutos la primera vez. Cuando termine, abre <http://localhost:8080>: esa es
+la puerta de entrada y el único puerto que necesitas recordar.
+
+Ahí verás el temario del curso: once temas repartidos en cuatro unidades, con
+lo que vas a saber al terminar cada uno y cuánto trabajo lleva. Empieza por
+donde toque en clase, o de arriba abajo si vas por libre.
+
+## Qué vas a aprender
+
+El curso recorre el camino completo del dato, y cada tramo tiene su
+laboratorio:
+
+| Unidad | Pregunta | Dónde se practica |
+|---|---|---|
+| **Obtener** | ¿De dónde salen los datos? | teoría |
+| **Almacenar** | ¿Dónde los pongo y por qué ahí? | SocialLab |
+| **Preparar** | ¿Cómo los dejo utilizables? | PreproLab · LLM Lab |
+| **Explotar** | ¿Qué saco de ellos? | SocialLab · StreamLab |
+
+Los cuatro laboratorios:
+
+| App | Puerto | De qué va |
+|---|---|---|
+| [**SocialLab**](apps/sociallab/README.md) | `:8000` | Una red social que cerró y hay que migrar. MongoDB, Neo4j y seis modelos de ML. |
+| [**LLM Lab**](apps/llmprep/README.md) | `:8001` | Un corpus sucio que hay que dejar listo para entrenar un modelo de lenguaje. |
+| [**PreproLab**](apps/preprolab/README.md) | `:8002` | Una flota de robots con catorce problemas plantados a propósito. El Tema 5 entero. |
+| [**StreamLab**](apps/streamlab/README.md) | `:8003` | Un robot ardió porque el aviso llegó tarde. Ahora los datos se procesan en vivo. |
+
+**91 ejercicios** en total, unas 32 horas de trabajo.
+
+## Cómo se trabaja
+
+Cada ejercicio vive en un fichero acabado en `_ex.py` y arranca vacío, con un
+`NotImplementedError` y el enunciado en el docstring: qué tiene que devolver,
+pistas de por dónde ir, y —esto es lo importante— **cómo comprobar tú mismo
+si lo has hecho bien**.
+
+Por ejemplo, en el ejercicio de deduplicar un corpus:
+
+> *Tienen que desaparecer tantas filas como lecturas con `intento > 1` haya en
+> el buzón. Si desaparece muchísimo más, has metido `intento` en la clave.*
+
+Los datos se generan con una semilla fija y el generador publica lo que ha
+inyectado, así que siempre tienes contra qué contrastar. No hay que esperar a
+que nadie corrija para saber si vas bien.
+
+Cuando implementes uno:
 
 ```bash
-./lab.sh sociallab seed         # genera datos sucios
-./lab.sh sociallab etl          # Spark ETL + carga MongoDB + Neo4j
+./lab.sh <app> restart      # ~3 s, FastAPI recarga tu código
 ```
 
-Recarga la web: ya tiene 2.500 usuarios, ranking de influencers, grafo social, etc.
+y recarga la pestaña en el navegador.
 
-### Como alumno: completar tu primer ejercicio
+## Ver la solución de un bloque
+
+Es tu copia: mandas tú. Desde el Hub, en **Configuración** o dentro de cada
+concepto en **Aprende**, puedes alternar cualquier bloque entre *ejercicio* y
+*solución*.
+
+Las soluciones se publican aquí cuando cierra la entrega de cada bloque
+(ver [`SOLUCIONES.md`](SOLUCIONES.md)). Hasta entonces los interruptores
+funcionan, pero no tienen nada que destapar todavía.
+
+## Si algo va mal
 
 ```bash
-./lab.sh sociallab up exercises   # todo en modo scaffold (sin soluciones)
-./lab.sh sociallab seed
-./lab.sh sociallab etl
+./lab.sh <app> logs         # qué está diciendo el contenedor
+./lab.sh <app> status       # flags y estado
+./lab.sh <app> restart      # reiniciar
+./lab.sh down-all           # parar todo
 ```
 
-Edita `apps/sociallab/src/web/routes/neo4j_basic_ex.py` e implementa el ejercicio `Neo4j-basic-1`. Luego:
+Desde el Hub, la pestaña **Estado** enseña lo mismo sin pasar por la terminal:
+si la infraestructura está viva, si hay datos generados, y los logs de cada
+app.
+
+¿Portátil justo de memoria? Hay modo cloud gratuito con MongoDB Atlas y Neo4j
+Aura: [`docs/MIGRACION_CLOUD.md`](docs/MIGRACION_CLOUD.md).
+
+---
+
+## Para docentes
+
+Lo que sigue interesa sobre todo a quien monte el laboratorio para una clase.
+
+### Por qué existe
+
+Montar un laboratorio docente de Big Data desde cero cuesta **días por
+curso**: instalar Spark, levantar Mongo + Neo4j, conectar la web, generar
+datos sintéticos, crear ejercicios… y cada año vuelve a romperse.
+
+Quasar lo resuelve de una sola vez: un comando levanta el ecosistema, una
+sola instalación de Mongo + Neo4j sirve a varias asignaturas, y los ejercicios
+se destapan sin tocar código.
+
+### El ecosistema
+
+| App | Puerto | Ejercicios |
+|---|---|---|
+| [**Quasar Hub**](apps/hub/) | `:8080` | — (temario, estado, configuración) |
+| [**SocialLab**](apps/sociallab/README.md) | `:8000` | 18 |
+| [**LLM Lab**](apps/llmprep/README.md) | `:8001` | 18 |
+| [**PreproLab**](apps/preprolab/README.md) | `:8002` | 37 |
+| [**StreamLab**](apps/streamlab/README.md) | `:8003` | 18 |
+
+> **Fuente de verdad de los conteos**: el catálogo del Hub
+> ([`apps/hub/src/config/__init__.py`](apps/hub/src/config/__init__.py), servido en
+> `/api/hub/catalog`) es la referencia única. Cualquier número de este repo debe
+> cuadrar con `total_exercises()`. El temario de la portada también sale de ahí.
+
+### Comandos globales
 
 ```bash
-docker compose restart app-sociallab    # FastAPI recarga tu código
+./lab.sh tour            # arranca todo + seed + ETL (~2-3 min)
+./lab.sh all-solutions   # destapa todos los bloques (demo)
+./lab.sh all-exercises   # bloquea todo (modo alumno)
+./lab.sh down-all        # para el ecosistema
+./lab.sh dist [ruta]     # regenera la copia para alumnos, sin soluciones
 ```
 
-Recarga la pestaña Neo4j de la web. Si lo implementaste bien, deja de aparecer el placeholder y se muestran las estadísticas reales del grafo.
-
-### Como profesor: destapar bloques según avance el curso
+### Destapar bloques según avanza el curso
 
 ```bash
-./lab.sh sociallab up exercises          # arrancar el curso con todo en scaffold
 ./lab.sh sociallab unlock neo4j basic    # tras la clase de Cypher básico
-./lab.sh sociallab unlock ml supervised  # tras la clase de clasificación
-./lab.sh sociallab status                # ver qué está desbloqueado
+./lab.sh preprolab unlock missing        # tras la de valores perdidos
+./lab.sh <app> status                    # qué está destapado
 ```
+
+Desde el Hub se hace igual, en la pestaña **Configuración**, sin terminal.
+
+### Repartir a los alumnos
+
+Los alumnos reciben el repo público, que es este mismo **sin los ficheros de
+solución**. Se genera con:
+
+```bash
+./lab.sh dist ../quasar-alumnos
+```
+
+Ver [`SOLUCIONES.md`](SOLUCIONES.md) y la sección de distribución más abajo
+para el flujo completo.
 
 ## Arquitectura
 
@@ -201,7 +251,7 @@ Cubren el tokenizer BPE y el modelo n-gram de LLM Lab, y la config compartida. E
 
 - **tests**: pytest sobre los módulos puros.
 - **lint**: `ruff check` (informativo, no bloqueante).
-- **smoke-build**: construye las imágenes Docker de las 3 apps.
+- **smoke-build**: construye las imágenes Docker de las cuatro apps y el Hub. Vive en `docker.yml` y solo corre cuando cambia algo que las afecta.
 
 ## Comandos `lab.sh` (referencia rápida)
 

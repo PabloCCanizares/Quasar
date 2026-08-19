@@ -149,7 +149,204 @@ APPS = {
             {"flag": "LAB_LLMPREP", "key": "train", "label": "Train ★", "desc": "Modelo de lenguaje + demo sucio vs limpio (perplexity)", "exercises": 3},
         ],
     },
+    "streamlab": {
+        "name": "StreamLab",
+        "tagline": "Datos en tiempo real",
+        "description": "La misma flota de robots, pero emitiendo en vivo. Ventanas temporales, watermarks y estado incremental con Spark Structured Streaming, para responder cuando los datos todavía están llegando.",
+        "url_internal": "http://app-streamlab:8003",
+        "url_public": "http://localhost:8003",
+        "container": "quasar-streamlab",
+        "status_path": "/api/streamlab/lab/status",
+        "docs": "http://localhost:8003/docs",
+        "readme": "https://github.com/PabloCCanizares/Quasar/blob/main/apps/streamlab/README.md",
+        "color": "#f59e0b",
+        "tech": ["Structured Streaming", "Spark", "MongoDB", "FastAPI"],
+        "architecture": [
+            {"label": "Emisor", "sub": "telemetría en vivo → micro-lotes"},
+            {"label": "Buzón raw", "sub": "carpeta que Spark vigila"},
+            {"label": "Structured Streaming", "sub": "ventanas · watermark · estado"},
+            {"split": [
+                {"label": "MongoDB", "sub": "agregados del centro de control"},
+                {"label": "Checkpoints", "sub": "por dónde iba la consulta"},
+            ]},
+            {"label": "Web", "sub": "batch vs streaming en vivo"},
+        ],
+        "tasks": {"emit": "Emitir telemetría de la flota"},
+        "uses_neo4j": False,
+        "uses_mongo": True,
+        "blocks": [
+            {"flag": "LAB_STREAMLAB", "key": "windows", "label": "Ventanas", "desc": "Tumbling, sliding y de sesión sobre la telemetría de la flota", "exercises": 6},
+            {"flag": "LAB_STREAMLAB", "key": "late", "label": "Datos tardíos", "desc": "Watermark: qué se corrige con lo que llega tarde y qué se descarta", "exercises": 6},
+            {"flag": "LAB_STREAMLAB", "key": "state", "label": "Estado ★", "desc": "Agregación incremental, checkpoints y dedup por reintento", "exercises": 6},
+        ],
+    },
 }
+
+
+# ============================================================
+# Temario de la asignatura
+# ============================================================
+# La portada del Hub es el índice del curso. Cada tema apunta a la app donde
+# se practica (`app`) o no apunta a ninguna (`app: None`), y entonces es
+# material de teoría: se ve, pero avisa de que todavía no hay laboratorio.
+#
+# El nº de ejercicios NO se escribe aquí: se saca del catálogo de arriba, que
+# es quien lo sabe. Así no hay dos sitios que puedan contradecirse.
+
+UNIDADES = [
+    {
+        "clave": "obtener",
+        "titulo": "Obtener",
+        "pregunta": "¿De dónde salen los datos?",
+        "temas": [
+            {
+                "titulo": "Obtención de datos",
+                "resumen": "Scraping web, APIs, volcados y ficheros heredados. Qué se puede recoger y qué obligaciones trae recogerlo.",
+                "app": None,
+                "minutos": 30,
+                "objetivo": "de dónde salen los datos antes de existir, y qué obligaciones trae recogerlos",
+            },
+            {
+                "titulo": "Calidad de datos",
+                "resumen": "Cada problema tiene nombre: fechas en cinco formatos, encoding roto, duplicados, huérfanos, ruido en las etiquetas.",
+                "app": None,
+                "minutos": 45,
+                "objetivo": "poner nombre a cada problema de un dataset sucio antes de intentar arreglarlo",
+                "enlace": {"texto": "Ver la radiografía de tus datos", "vista": "learn"},
+            },
+        ],
+    },
+    {
+        "clave": "almacenar",
+        "titulo": "Almacenar",
+        "pregunta": "¿Dónde los pongo y por qué ahí?",
+        "temas": [
+            {
+                "titulo": "Bases de datos NoSQL",
+                "resumen": "Documental y grafo conviviendo. Ninguna base es buena en todo: hay preguntas que solo una de las dos responde bien.",
+                "app": "sociallab",
+                "minutos": 240,
+                "objetivo": "elegir entre documental y grafo según la pregunta, y escribir Cypher sobre un grafo social",
+                "bloques": ["basic", "intermediate", "advanced"],
+            },
+            {
+                "titulo": "El data lake: raw → silver → gold",
+                "resumen": "Lo que llega tal cual, lo que ya está limpio y lo que está listo para servir. raw es materia prima, gold es lo servible.",
+                "app": None,
+                "minutos": 30,
+                "objetivo": "por qué el dato se organiza en capas y qué va en cada una",
+                "enlace": {"texto": "Ver la arquitectura", "vista": "arch"},
+            },
+        ],
+    },
+    {
+        "clave": "preparar",
+        "titulo": "Preparar",
+        "pregunta": "¿Cómo los dejo utilizables?",
+        "temas": [
+            {
+                "titulo": "ETL con Spark",
+                "resumen": "El pipeline que lleva de raw a gold. Mismo código en tu portátil que en un cluster: cambia la escala, no la lógica.",
+                "app": "sociallab",
+                "minutos": 180,
+                "objetivo": "escribir un pipeline que corra igual en tu portátil y en un cluster",
+                "enlace": {"texto": "Lanzar el ETL", "vista": "status"},
+            },
+            {
+                "titulo": "Preprocesamiento (Tema 5)",
+                "resumen": "Valores perdidos, outliers, normalización, discretización y reducción. Para cada decisión hay un criterio.",
+                "app": "preprolab",
+                "minutos": 600,
+                "objetivo": "aplicar las técnicas del tema con criterio, y medir si de verdad mejoraron el modelo",
+            },
+            {
+                "titulo": "Datos para modelos de lenguaje",
+                "resumen": "Limpiar el corpus, quitar casi-duplicados con MinHash, tokenizar con BPE. Corpus sucio y limpio, mismo modelo.",
+                "app": "llmprep",
+                "minutos": 300,
+                "objetivo": "preparar un corpus y comprobar que la limpieza cambia lo que el modelo aprende",
+            },
+        ],
+    },
+    {
+        "clave": "explotar",
+        "titulo": "Explotar",
+        "pregunta": "¿Qué saco de ellos?",
+        "temas": [
+            {
+                "titulo": "Machine Learning",
+                "resumen": "Supervisado, no supervisado y sobre grafo, con una fuga de datos puesta a propósito para aprender a olerla.",
+                "app": "sociallab",
+                "minutos": 180,
+                "objetivo": "entrenar sobre datos limpios y detectar cuándo un modelo es sospechosamente bueno",
+                "bloques": ["supervised", "unsupervised", "graph_ml"],
+            },
+            {
+                "titulo": "Procesamiento en tiempo real",
+                "resumen": "Ventanas, watermarks y estado incremental. Una respuesta correcta que llega tarde es otra forma de estar equivocada.",
+                "app": "streamlab",
+                "minutos": 300,
+                "objetivo": "responder preguntas mientras los datos siguen llegando, y decidir cuánto esperar",
+            },
+            {
+                "titulo": "Visualización y explotación",
+                "resumen": "Cómo se cuenta lo que se ha encontrado, y las trampas de representar mal un dato correcto.",
+                "app": None,
+                "minutos": 30,
+                "objetivo": "contar lo que has encontrado sin que la representación mienta",
+            },
+            {
+                "titulo": "Reproducibilidad y gobernanza",
+                "resumen": "La lógica vive en el ETL versionado, no en pasos manuales que nadie recuerda. Si no puedes reconstruirlo, no lo controlas.",
+                "app": None,
+                "minutos": 20,
+                "objetivo": "dejar un pipeline que otro pueda volver a ejecutar y obtener lo mismo",
+                "enlace": {"texto": "Cómo funciona Quasar", "vista": "arch"},
+            },
+        ],
+    },
+]
+
+
+def temario() -> list[dict]:
+    """El temario con los datos del catálogo ya resueltos.
+
+    Rellena, por cada tema con laboratorio, el color, la URL y cuántos
+    ejercicios tiene (contando solo sus bloques si el tema usa una parte
+    concreta de la app). Numera los temas de corrido, como un índice.
+    """
+    salida = []
+    n = 0
+    for unidad in UNIDADES:
+        temas = []
+        for tema in unidad["temas"]:
+            n += 1
+            item = {"n": n, "titulo": tema["titulo"], "resumen": tema["resumen"],
+                    "enlace": tema.get("enlace"),
+                    "minutos": tema.get("minutos"),
+                    "objetivo": tema.get("objetivo")}
+            meta = APPS.get(tema["app"]) if tema.get("app") else None
+            if meta:
+                claves = tema.get("bloques")
+                bloques = [b for b in meta["blocks"]
+                           if claves is None or b["key"] in claves]
+                item.update({
+                    "app": tema["app"],
+                    "app_nombre": meta["name"],
+                    "color": meta["color"],
+                    "url": meta["url_public"],
+                    "ejercicios": sum(b["exercises"] for b in bloques),
+                    "bloques": [b["key"] for b in bloques],
+                })
+            else:
+                item.update({"app": None, "color": None, "ejercicios": 0})
+            temas.append(item)
+        salida.append({
+            "clave": unidad["clave"], "titulo": unidad["titulo"],
+            "pregunta": unidad["pregunta"], "temas": temas,
+            "minutos": sum(x["minutos"] or 0 for x in temas),
+        })
+    return salida
 
 
 def app_block_keys(app_key: str, flag: str) -> list[str]:

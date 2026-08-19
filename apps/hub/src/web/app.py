@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from src.config import APPS, total_exercises
+from src.config import APPS, temario, total_exercises
 from src.web.routes import status, control, infra
 
 WEB_DIR = Path(__file__).parent
@@ -51,6 +51,7 @@ async def catalog():
     """Catálogo de las apps con bloques legibles, tags y enlaces."""
     return {
         "total_exercises": total_exercises(),
+        "temario": temario(),
         "apps": [
             {
                 "key": k,

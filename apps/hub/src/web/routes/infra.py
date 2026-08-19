@@ -41,7 +41,7 @@ def _mongo_counts() -> dict:
         client = MongoClient(f"mongodb://{MONGO_HOST}:{MONGO_PORT}", serverSelectionTimeoutMS=1500)
         client.admin.command("ping")
         out = {}
-        for db_name in ("sociallab", "preprolab", "llmprep"):
+        for db_name in APPS.keys():
             db = client[db_name]
             collections = db.list_collection_names()
             counts = {}
@@ -62,6 +62,8 @@ _DATA_MARKERS = {
     "sociallab": ("sociallab/raw/users.json", "Datos sucios generados"),
     "preprolab": ("preprolab/raw/robots.json", "Flota de robots generada"),
     "llmprep": ("llmprep/raw/corpus.json", "Corpus generado"),
+    # El emisor deja un manifiesto al terminar la emisión (fase 2).
+    "streamlab": ("streamlab/raw/_emision.json", "Telemetría emitida"),
 }
 
 
@@ -131,7 +133,7 @@ async def data_profiles() -> dict:
     root = Path(DATA_ROOT)
     profiles: dict = {}
     generated_at: dict = {}
-    for app_key in ("sociallab", "preprolab", "llmprep"):
+    for app_key in APPS.keys():
         path = root / app_key / "silver" / "_profile.json"
         if path.exists():
             try:

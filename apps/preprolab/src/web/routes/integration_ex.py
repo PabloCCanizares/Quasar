@@ -57,6 +57,14 @@ async def union(
       - cols_a = set(df_a.columns); usar &/-/| para intersección/diferencia/unión.
       - pd.concat([df_a, df_b], ignore_index=True).
       - Para permisivo: pd.concat([df_a[common], df_b[common]], ignore_index=True).
+
+    Compruebalo:
+      - Si las tablas no comparten columnas, la union no deberia hacerse: el
+        modo bloqueado es la respuesta correcta, no un error.
+      - En modo permisivo, las filas del resultado tienen que ser la suma de
+        las dos tablas, y las columnas solo las comunes.
+      - Si te salen mas columnas que las comunes, estas concatenando sin
+        recortar y apareceran nulos por todas partes.
     """
     return _exercise_placeholder(
         "INTEG-1",
@@ -95,6 +103,14 @@ async def join(
       - Usa suffixes=("_a", "_b") para evitar conflictos de columnas.
       - df[on].dropna().unique() para sacar las keys.
       - Para serializar, .replace({np.nan: None}) antes de to_dict.
+
+    Compruebalo:
+      - inner <= left <= outer y inner <= right <= outer, siempre.
+      - Si hay claves repetidas en alguno de los lados, el inner puede salir
+        MAYOR que cualquiera de las dos tablas: eso es normal y conviene
+        entenderlo, no arreglarlo.
+      - El outer no puede perder ninguna clave: la union de claves de las dos
+        tablas tiene que aparecer entera.
     """
     return _exercise_placeholder(
         "INTEG-2",
@@ -142,6 +158,14 @@ async def find_redundancy(
       - df[num_cols].corr(method='pearson') devuelve la matriz Pearson.
       - Itera con i < j para evitar duplicados/diagonal.
       - var_a = df[a].var(); más varianza → más poder discriminativo.
+
+    Compruebalo:
+      - El seed inyecta a proposito tres columnas fuertemente correlacionadas
+        entre si. Con un umbral alto tienen que salir esas parejas; si no
+        sale ninguna, revisa el valor absoluto del coeficiente.
+      - Cramer's V vive en [0, 1], nunca negativo. Si te sale fuera, la
+        normalizacion esta mal.
+      - Baja el umbral y la lista de redundantes solo puede crecer.
     """
     return _exercise_placeholder(
         "INTEG-3",
@@ -171,6 +195,13 @@ async def dedup_by_correlation(
         }
 
     No modifica el dataset en disco — solo simula la operación.
+
+    Compruebalo:
+      - El resultado tiene que tener menos columnas que el original, nunca
+        mas, y ninguna fila menos: aqui se quitan columnas, no filas.
+      - De cada pareja redundante debe sobrevivir exactamente una.
+      - Tras aplicarlo, volver a buscar redundancia con el mismo umbral no
+        deberia encontrar nada. Es la mejor prueba de que funciono.
     """
     return _exercise_placeholder(
         "INTEG-4",

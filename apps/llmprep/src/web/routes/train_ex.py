@@ -42,6 +42,13 @@ async def train_endpoint(
       - Limpia: fix_encoding → strip_html → redact_pii (de routes.clean).
       - model.train(train_texts); model.perplexity(val_texts).
       - Guarda el modelo en una global _model.
+
+    Compruebalo:
+      - La perplejidad tiene que bajar segun avanza el entrenamiento. Si sube
+        o se queda plana, algo va mal en la actualizacion.
+      - La perplejidad nunca puede ser menor que 1.
+      - Entrenar sobre mas datos deberia mejorarla; si no cambia nada,
+        comprueba que estas leyendo el corpus entero.
     """
     return _ph("TRAIN-1", "Entrena NgramLM sobre corpus limpio, calcula perplexity, cachéalo.")
 
@@ -58,6 +65,13 @@ async def generate_endpoint(
     Pistas:
       - _model.generate(prompt, max_tokens, temperature).
       - Temperature baja = más conservador; alta = más aleatorio.
+
+    Compruebalo:
+      - El texto generado tiene que usar solo tokens del vocabulario.
+      - Con temperatura baja el texto se repite mucho; con temperatura alta
+        se vuelve incoherente. Si no notas diferencia al cambiarla, el
+        muestreo no la esta usando.
+      - Generar dos veces con la misma semilla tiene que dar lo mismo.
     """
     return _ph("TRAIN-2", "Genera texto con _model.generate(prompt, max_tokens, temperature).")
 
@@ -84,5 +98,16 @@ async def compare_endpoint(
       - dirty_model.train(textos_crudos), clean_model.train(textos_limpios).
       - Ambos se evalúan sobre val_texts LIMPIOS.
       - perplexity_improvement = (dirty_ppl - clean_ppl) / dirty_ppl.
+
+    Compruebalo:
+      - Esta es la demo: la perplejidad del modelo entrenado con el corpus
+        limpio tiene que ser MENOR que la del sucio, evaluando ambos sobre el
+        mismo conjunto.
+      - Si te sale al reves o casi igual, lo mas probable es que estes
+        evaluando cada modelo sobre su propio conjunto: entonces no son
+        comparables. Los dos tienen que medirse contra el mismo texto.
+      - Mira tambien el tamano del vocabulario: el corpus sucio genera mas
+        tokens distintos por culpa de la basura, y eso es parte de por que
+        aprende peor.
     """
     return _ph("TRAIN-3", "Entrena 2 modelos (sucio/limpio), compara perplexity + generación.")
